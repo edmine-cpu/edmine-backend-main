@@ -1,0 +1,74 @@
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, Query
+from typing import Optional
+
+from services.user.security.utils import JWT_COOKIE_NAME
+from services.user.service import UserServices
+from schemas.user import UserRegisterForm, UserLoginForm
+from routers.secur import get_current_user
+from models.user import User
+
+async def get_current_user_dependency(request: Request):
+    return await get_current_user(request)
+
+
+router = APIRouter()
+
+
+@router.get("/users")
+async def get_users(search: Optional[str] = Query(None)):
+    users = await UserServices.get_users(search=search)
+    return users
+
+
+@router.get("/user/{id}")
+async def get_user(id: int):
+    user = await UserServices.get_user_by_id(id=id)
+    return user
+
+
+@router.post('/register')
+async def register_post(form_data: UserRegisterForm):
+    print(f"DEBUG: 123123123213213 user: {form_data}")
+    return await UserServices.register_user(form_data)
+
+
+@router.post("/login")
+async def login_post(login_data: UserLoginForm):
+    return await UserServices.authenticate_user(login_data)
+
+
+@router.post("/logout")
+async def logout_user(response: Response):
+    response.delete_cookie(key= JWT_COOKIE_NAME, httponly=True, samesite="none", secure=True, path="/")
+    return {"detail": "Logged out"}
+
+
+# response.set_cookie(
+#     key=JWT_COOKIE_NAME,
+#     value=jwt_token,
+#     max_age=60 * 60 * 24 * 7,  # 7 дней
+#     httponly=True,
+#     secure=True,
+#     samesite="none",
+#     path="/",
+# )
+
+@router.post('/verify-code')
+async def verify_code_post(request: Request):
+    return await UserServices.verify_email_code(request)
+
+
+@router.get("/me")
+async def get_current_user_info(user: User = Depends(get_current_user_dependency)):
+    """Get current user information"""
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "language": user.language,
+        "city": user.city
+    }
