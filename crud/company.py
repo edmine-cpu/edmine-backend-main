@@ -1,12 +1,51 @@
 from fastapi.responses import JSONResponse
 from models import Company, Country, City
 from schemas.company import CompanyCreateSchema
+from tortoise.expressions import Q
 
 
 class CompanyCRUD:
     @staticmethod
-    async def get_all_companies(limit, offset):
-        companies = await Company.all().limit(limit).offset(offset)
+    async def get_all_companies(limit, offset, category=None, subcategory=None, country=None, city=None, search=None, sort="relevance"):
+        query = Company.all().prefetch_related('categories', 'subcategories')
+        
+        # Apply filters
+        if category:
+            query = query.filter(categories__id=int(category))
+        
+        if subcategory:
+            query = query.filter(subcategories__id=int(subcategory))
+            
+        if country:
+            query = query.filter(country__icontains=country)
+            
+        if city:
+            query = query.filter(city__icontains=city)
+            
+        if search:
+            query = query.filter(
+                Q(name__icontains=search) |
+                Q(description_uk__icontains=search) |
+                Q(description_en__icontains=search) |
+                Q(description_pl__icontains=search) |
+                Q(description_fr__icontains=search) |
+                Q(description_de__icontains=search)
+            )
+        
+        # Apply sorting
+        if sort == "relevance":
+            # Keep default order
+            pass
+        elif sort == "date_desc":
+            query = query.order_by("-id")
+        elif sort == "date_asc":
+            query = query.order_by("id")
+        elif sort == "title_asc":
+            query = query.order_by("name")
+        elif sort == "title_desc":
+            query = query.order_by("-name")
+        
+        companies = await query.limit(limit).offset(offset).distinct()
         return companies
 
 

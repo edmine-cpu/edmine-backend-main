@@ -3,6 +3,8 @@ from typing import Optional
 from models import User
 from models.chat import Chat, Message
 from routers.secur import get_current_user
+from services.translation.utils import translate_text, SUPPORTED_LANGUAGES
+from deep_translator import GoogleTranslator
 
 async def get_current_user_dependency(request: Request):
     return await get_current_user(request)
@@ -12,6 +14,61 @@ import uuid
 from datetime import datetime
 
 router = APIRouter()
+
+async def detect_message_language(text: str) -> str:
+    """Автоматически определяет язык сообщения"""
+    if not text or not text.strip():
+        return 'uk'  # По умолчанию украинский
+    
+    try:
+        from deep_translator.constants import GOOGLE_LANGUAGES_TO_CODES
+        
+        # Берем первые 100 символов для анализа
+        sample_text = text[:100]
+        
+        # Пробуем переводить на разные языки и смотрим результат
+        # Если текст не переводится (остается тем же), значит он уже на целевом языке
+        
+        test_translations = {}
+        for lang in SUPPORTED_LANGUAGES:
+            try:
+                translator = GoogleTranslator(source='auto', target=lang)
+                translated = translator.translate(sample_text)
+                
+                # Если перевод сильно отличается от оригинала, значит это другой язык
+                if translated and len(translated.strip()) > 0:
+                    # Простая эвристика: если переведенный текст сильно отличается, это другой язык
+                    similarity = len(set(sample_text.lower().split()) & set(translated.lower().split()))
+                    test_translations[lang] = similarity
+            except:
+                continue
+        
+        # Если не удалось определить автоматически, используем простую эвристику по словам
+        text_lower = text.lower()
+        
+        # Простые ключевые слова для определения языка
+        if any(word in text_lower for word in ['hello', 'hi', 'good', 'how', 'what', 'the', 'and', 'you', 'are', 'that', 'sounds', 'great', 'plans', 'weekend']):
+            return 'en'
+        elif any(word in text_lower for word in ['привіт', 'привет', 'як', 'як справи', 'добре', 'дякую', 'спасибо', 'що', 'де', 'коли', 'все', 'плануємо', 'поїхати', 'дачу']):
+            return 'uk'
+        elif any(word in text_lower for word in ['dzień', 'dobry', 'jak', 'się', 'masz', 'dziękuję', 'dzięki', 'cześć', 'witaj']):
+            return 'pl'
+        elif any(word in text_lower for word in ['bonjour', 'comment', 'allez', 'vous', 'merci', 'au revoir', 'salut']):
+            return 'fr'
+        elif any(word in text_lower for word in ['guten', 'tag', 'wie', 'geht', 'ihnen', 'danke', 'auf wiedersehen', 'hallo']):
+            return 'de'
+        
+        # Дополнительная проверка по отдельным словам
+        if 'привет' in text_lower:
+            return 'uk'  # Считаем русский как украинский для перевода
+        elif 'hello' in text_lower:
+            return 'en'
+        
+        return 'uk'  # По умолчанию украинский
+        
+    except Exception as e:
+        print(f"Ошибка определения языка: {e}")
+        return 'uk'  # По умолчанию украинский при ошибке
 
 # Создаем директорию для файлов если её нет
 os.makedirs("static/chat_files", exist_ok=True)
@@ -117,6 +174,7 @@ async def list_messages(
     chat_id: int, 
     page: int = 1,
     limit: int = 50,
+    translate_to: Optional[str] = None,
     current_user: User = Depends(get_current_user_dependency)
 ):
     """Get messages from chat"""
@@ -141,7 +199,7 @@ async def list_messages(
         
         result = []
         for msg in messages:
-            result.append({
+            msg_data = {
                 "id": msg.id,
                 "content": msg.content,
                 "file_path": msg.file_path,
@@ -150,13 +208,39 @@ async def list_messages(
                 "sender_id": msg.sender.id,
                 "is_read": msg.is_read,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
-            })
+            }
+            
+            # Если запрошен перевод и есть контент для перевода
+            if translate_to and translate_to in SUPPORTED_LANGUAGES and msg.content:
+                try:
+                    detected_language = await detect_message_language(msg.content)
+                    if detected_language != translate_to:
+                        translated_content = await translate_text(msg.content, detected_language, translate_to)
+                        if translated_content:
+                            msg_data["translated_content"] = translated_content
+                            msg_data["detected_language"] = detected_language
+                            msg_data["target_language"] = translate_to
+                            msg_data["is_translated"] = True
+                        else:
+                            msg_data["is_translated"] = False
+                    else:
+                        msg_data["is_translated"] = False
+                except Exception as e:
+                    print(f"Ошибка перевода сообщения {msg.id}: {e}")
+                    msg_data["is_translated"] = False
+            else:
+                msg_data["is_translated"] = False
+            
+            result.append(msg_data)
         
         return {
             "messages": result,
             "page": page,
             "limit": limit,
-            "has_more": len(result) == limit
+            "has_more": len(result) == limit,
+            "translation_enabled": translate_to is not None,
+            "target_language": translate_to,
+            "supported_languages": SUPPORTED_LANGUAGES
         }
     except HTTPException:
         raise
@@ -292,5 +376,99 @@ async def get_unread_count(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка получения количества непрочитанных сообщений: {str(e)}")
+
+@router.post('/chats/{chat_id}/translate')
+async def translate_chat_messages(
+    chat_id: int,
+    target_language: str = Form(...),
+    current_user: User = Depends(get_current_user_dependency)
+):
+    """Переводит сообщения собеседника в чате на указанный язык"""
+    try:
+        # Проверяем доступ к чату
+        chat = await Chat.get_or_none(id=chat_id)
+        if chat is None:
+            raise HTTPException(status_code=404, detail="Чат не найден")
+        
+        if current_user.id not in [chat.user1_id, chat.user2_id]:
+            raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
+
+        # Проверяем поддержку целевого языка
+        if target_language not in SUPPORTED_LANGUAGES:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Неподдерживаемый язык. Поддерживаемые языки: {', '.join(SUPPORTED_LANGUAGES)}"
+            )
+
+        # Определяем партнера (собеседника)
+        partner_id = chat.user2_id if chat.user1_id == current_user.id else chat.user1_id
+
+        # Получаем все сообщения от собеседника
+        partner_messages = await Message.filter(
+            chat_id=chat_id,
+            sender__id=partner_id
+        ).prefetch_related("sender").order_by('-created_at').all()
+
+        translated_messages = []
+        
+        for message in partner_messages:
+            if not message.content or not message.content.strip():
+                # Пропускаем пустые сообщения или сообщения только с файлами
+                translated_messages.append({
+                    "id": message.id,
+                    "original_content": message.content,
+                    "translated_content": message.content,
+                    "detected_language": None,
+                    "target_language": target_language,
+                    "translation_available": False
+                })
+                continue
+            
+            # Определяем язык сообщения
+            detected_language = await detect_message_language(message.content)
+            print(f"Message '{message.content}' detected as language: {detected_language}")
+            
+            # Переводим только если язык отличается от целевого
+            translated_content = message.content
+            translation_available = True
+            
+            if detected_language != target_language:
+                print(f"Translating from {detected_language} to {target_language}")
+                translated_result = await translate_text(
+                    message.content, 
+                    detected_language, 
+                    target_language
+                )
+                
+                if translated_result:
+                    translated_content = translated_result
+                    print(f"Translation result: {translated_result}")
+                else:
+                    translation_available = False
+                    print("Translation failed")
+            else:
+                print(f"No translation needed - same language ({detected_language})")
+            
+            translated_messages.append({
+                "id": message.id,
+                "original_content": message.content,
+                "translated_content": translated_content,
+                "detected_language": detected_language,
+                "target_language": target_language,
+                "translation_available": translation_available,
+                "created_at": message.created_at.isoformat() if message.created_at else None
+            })
+
+        return {
+            "chat_id": chat_id,
+            "target_language": target_language,
+            "total_messages": len(translated_messages),
+            "translated_messages": translated_messages
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка перевода сообщений: {str(e)}")
 
 

@@ -1,5 +1,5 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, Request
+from typing import Annotated, Optional
+from fastapi import APIRouter, Depends, Request, Query
 
 from routers.secur import get_current_user
 from schemas.company import PaginationParams, CompanyCreateSchema, CompanyUpdateSchema
@@ -12,8 +12,25 @@ PaginationDep = Annotated[PaginationParams, Depends(PaginationParams)]
 
 
 @router.get('/companies')
-async def get_companies(pagination: PaginationDep):
-    companies = await CompanyService.get_all_companies(limit=pagination.limit, offset=pagination.offset)
+async def get_companies(
+    pagination: PaginationDep,
+    category: Optional[str] = Query(None),
+    subcategory: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
+    city: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    sort: Optional[str] = Query("relevance"),
+):
+    companies = await CompanyService.get_all_companies(
+        limit=pagination.limit, 
+        offset=pagination.offset,
+        category=category,
+        subcategory=subcategory,
+        country=country,
+        city=city,
+        search=search,
+        sort=sort
+    )
     return companies
 
 

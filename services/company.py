@@ -8,8 +8,17 @@ from services.translation.companys import auto_translate_descriptions
 
 class CompanyService:
     @staticmethod
-    async def get_all_companies(limit, offset):
-        companies = await CompanyCRUD.get_all_companies(limit=limit, offset=offset)
+    async def get_all_companies(limit, offset, category=None, subcategory=None, country=None, city=None, search=None, sort="relevance"):
+        companies = await CompanyCRUD.get_all_companies(
+            limit=limit, 
+            offset=offset,
+            category=category,
+            subcategory=subcategory,
+            country=country,
+            city=city,
+            search=search,
+            sort=sort
+        )
         return companies
 
 
