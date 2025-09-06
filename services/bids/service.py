@@ -4,6 +4,7 @@ import os
 from fastapi.responses import JSONResponse
 from fastapi import HTTPException, Request
 from tortoise.expressions import Q
+import asyncio
 
 from api.bids_config import DELETE_TOKEN_LENGTH
 from api_old.email_utils import (
@@ -95,6 +96,112 @@ class BidService:
         return JSONResponse({
             "success": True,
             "message": "Заявка успешно создана",
+            "requires_verification": False
+        })
+
+    @staticmethod
+    async def create_request_fast(data: BidCreateRequest, files, lang: str, user_role: int, user_email: str,
+                                 request: Request):
+        """
+        Сверхбыстрое создание заявки с ленивым переводом
+        """
+        # Запускаем все операции параллельно
+        current_user_task = asyncio.create_task(get_current_user(request))
+        files_task = asyncio.create_task(_validate_uploaded_files(
+            files=files, user_role=user_role, user_email=user_email, lang=lang, form=data.dict()
+        ))
+        
+        # Ждем завершения критических операций
+        current_user, temp_files = await asyncio.gather(current_user_task, files_task)
+        
+        # Параллельно обрабатываем файлы и готовим данные
+        file_paths_task = asyncio.create_task(_move_files_to_final_location(temp_files))
+        
+        # Подготавливаем данные для заявки
+        request_data = data.dict()
+        request_data["author"] = current_user
+        request_data["delete_token"] = secrets.token_urlsafe(DELETE_TOKEN_LENGTH)
+        
+        # Ждем завершения обработки файлов
+        file_paths = await file_paths_task
+        request_data["files"] = file_paths
+        
+        # Создаем заявку сразу (без переводов)
+        bid = await BidCRUD.create_bid(request_data)
+        
+        # Генерируем слаги для основного языка
+        primary_lang = 'uk'  # или определять динамически
+        primary_title = request_data.get(f'title_{primary_lang}', '')
+        if primary_title:
+            from api_old.slug_utils import generate_slug
+            slug = generate_slug(primary_title, primary_lang)
+            if bid.id:
+                slug = f"{slug}-{bid.id}"
+            
+            # Обновляем только основной slug
+            await BidCRUD.update_bid(bid, {f'slug_{primary_lang}': slug})
+        
+        # Запускаем перевод в фоне (не ждем)
+        translation_task = asyncio.create_task(auto_translate_bid_fields(
+            title_uk=request_data.get('title_uk'),
+            title_en=request_data.get('title_en'),
+            title_pl=request_data.get('title_pl'),
+            title_fr=request_data.get('title_fr'),
+            title_de=request_data.get('title_de'),
+            description_uk=request_data.get('description_uk'),
+            description_en=request_data.get('description_en'),
+            description_pl=request_data.get('description_pl'),
+            description_fr=request_data.get('description_fr'),
+            description_de=request_data.get('description_de')
+        ))
+        
+        # Запускаем обновление переводов в фоне
+        async def update_translations():
+            try:
+                translation_result = await translation_task
+                # Обновляем данные переведенными значениями
+                update_data = {
+                    'title_uk': translation_result['title_uk'],
+                    'title_en': translation_result['title_en'],
+                    'title_pl': translation_result['title_pl'],
+                    'title_fr': translation_result['title_fr'],
+                    'title_de': translation_result['title_de'],
+                    'description_uk': translation_result['description_uk'],
+                    'description_en': translation_result['description_en'],
+                    'description_pl': translation_result['description_pl'],
+                    'description_fr': translation_result['description_fr'],
+                    'description_de': translation_result['description_de'],
+                    'auto_translated_fields': translation_result['auto_translated_fields']
+                }
+                
+                # Генерируем все слаги
+                slugs = await generate_bid_slugs(
+                    title_uk=update_data['title_uk'],
+                    title_en=update_data['title_en'],
+                    title_pl=update_data['title_pl'],
+                    title_fr=update_data['title_fr'],
+                    title_de=update_data['title_de'],
+                    bid_id=bid.id
+                )
+                
+                # Обновляем заявку с переводами и слагами
+                update_data.update(slugs)
+                await BidCRUD.update_bid(bid, update_data)
+                
+            except Exception as e:
+                print(f"Background translation update failed: {e}")
+        
+        # Запускаем обновление в фоне
+        asyncio.create_task(update_translations())
+        
+        # Отправляем email в фоне (не ждем)
+        delete_link = f'{request.base_url}/delete-request/{bid.delete_token}'
+        asyncio.create_task(send_bid_confirmation_email(current_user.email, delete_link))
+
+        return JSONResponse({
+            "success": True,
+            "message": "Заявка успешно создана (переводы обновляются в фоне)",
+            "bid_id": bid.id,
             "requires_verification": False
         })
 

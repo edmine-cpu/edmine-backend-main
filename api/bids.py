@@ -42,13 +42,25 @@ async def create_request(lang: str, request: Request, files: Optional[List[Uploa
     user_role = getattr(request.state, 'user_role', None)
     user_email = getattr(request.state, 'user_email', None)
 
-
     form_data = await request.form()
     data = BidCreateRequest(**form_data)
 
     print(f"DEBUG: Budget from form: {data.budget}")
 
     return await BidService.create_request(data, files, lang, user_role, user_email, request)
+
+@router.post('/{lang}/create-request-fast')
+async def create_request_fast(lang: str, request: Request, files: Optional[List[UploadFile]] = File(None)):
+    """
+    Сверхбыстрое создание заявки с ленивым переводом в фоне
+    """
+    user_role = getattr(request.state, 'user_role', None)
+    user_email = getattr(request.state, 'user_email', None)
+
+    form_data = await request.form()
+    data = BidCreateRequest(**form_data)
+
+    return await BidService.create_request_fast(data, files, lang, user_role, user_email, request)
 
 
 @router.post('/{lang}/verify-request-code')

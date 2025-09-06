@@ -1,5 +1,7 @@
 import os
 import secrets
+import asyncio
+import aiofiles
 from typing import Optional, List
 
 from fastapi import UploadFile, HTTPException
@@ -8,8 +10,6 @@ from starlette.responses import JSONResponse
 
 from api.bids_config import ALLOWED_FILE_TYPES, MAX_FILES_COUNT, TEMP_FILES_DIR, BID_FILES_DIR
 from models import Category
-
-
 
 async def _validate_uploaded_files(
         files: Optional[List[UploadFile]],
@@ -20,7 +20,7 @@ async def _validate_uploaded_files(
 ) -> List[str]:
 
     """
-    Проверка загруженных файлов: тип, размер, количество.
+    Асинхронная проверка загруженных файлов: тип, размер, количество.
     Возвращает список временных путей к файлам.
     """
     ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.svg', '.pdf', '.bmp', '.gif'}
@@ -32,7 +32,7 @@ async def _validate_uploaded_files(
     if len(files) > MAX_FILES_COUNT:
         raise HTTPException(status_code=400, detail=f'Максимальна кількість файлів: {MAX_FILES_COUNT}')
 
-    for file in files:
+    async def process_single_file(file):
         ext = os.path.splitext(file.filename or '')[1].lower()
         if file.content_type not in ALLOWED_FILE_TYPES and ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(status_code=400, detail=f'Непідтримуваний тип файлу: {file.content_type}')
@@ -45,23 +45,26 @@ async def _validate_uploaded_files(
         temp_file_path = os.path.join(TEMP_FILES_DIR, temp_filename)
 
         os.makedirs(TEMP_FILES_DIR, exist_ok=True)
-        with open(temp_file_path, 'wb') as f:
-            f.write(content)
+        async with aiofiles.open(temp_file_path, 'wb') as f:
+            await f.write(content)
 
-        temp_file_paths.append(temp_file_path)
+        return temp_file_path
 
+    # Обрабатываем все файлы параллельно
+    tasks = [process_single_file(file) for file in files]
+    temp_file_paths = await asyncio.gather(*tasks)
+    
     return temp_file_paths
-
 
 async def _move_files_to_final_location(temp_file_paths: List[str]) -> List[str]:
     """
-    Перемещает временные файлы в финальную папку BID_FILES_DIR и возвращает их новые пути.
+    Асинхронно перемещает временные файлы в финальную папку BID_FILES_DIR и возвращает их новые пути.
     """
     final_file_paths = []
 
-    for temp_path in temp_file_paths:
+    async def move_single_file(temp_path):
         if not os.path.exists(temp_path):
-            continue
+            return None
 
         filename = os.path.basename(temp_path)
         safe_filename = ''.join(c if c.isalnum() or c == '.' else '_' for c in filename)
@@ -76,10 +79,16 @@ async def _move_files_to_final_location(temp_file_paths: List[str]) -> List[str]
 
         os.makedirs(BID_FILES_DIR, exist_ok=True)
         os.rename(temp_path, final_path)
-        final_file_paths.append(final_path)
+        return final_path
+
+    # Перемещаем все файлы параллельно
+    tasks = [move_single_file(temp_path) for temp_path in temp_file_paths]
+    results = await asyncio.gather(*tasks)
+    
+    # Фильтруем None значения
+    final_file_paths = [path for path in results if path is not None]
 
     return final_file_paths
-
 
 async def _process_category_id(category: Optional[str]) -> Optional[int]:
     """
@@ -94,7 +103,6 @@ async def _process_category_id(category: Optional[str]) -> Optional[int]:
     except Exception:
         return None
 
-
 async def _process_under_category_id(under_category: Optional[str]) -> Optional[int]:
     """
     Получить ID подкатегории или None если некорректная
@@ -103,9 +111,6 @@ async def _process_under_category_id(under_category: Optional[str]) -> Optional[
         if not under_category or under_category.strip() == '' or under_category == 'None':
             return None
         under_category_id = int(under_category)
-        # Предполагаем, что есть модель UnderCategory
-        from models import UnderCategory
-        under_category_obj = await UnderCategory.get(id=under_category_id)
-        return under_category_obj.id
+        return under_category_id
     except Exception:
         return None

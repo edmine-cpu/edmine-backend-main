@@ -1,6 +1,7 @@
 from deep_translator import GoogleTranslator
 from typing import Dict, Optional
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,103 @@ async def translate_text(text: str, source_lang: str, target_lang: str) -> Optio
         logger.error(f"Translation failed from {source_lang} to {target_lang}: {e}")
         return None
 
+async def translate_text_batch(texts_to_translate: list) -> Dict[str, str]:
+    """
+    Асинхронный перевод нескольких текстов одновременно
+    """
+    async def translate_single(text_info):
+        try:
+            source_lang = text_info['source_lang']
+            target_lang = text_info['target_lang']
+            text = text_info['text']
+            field_name = text_info['field_name']
+            
+            if not text or not text.strip() or source_lang == target_lang:
+                return field_name, text
+            
+            source_code = LANGUAGE_MAPPING.get(source_lang, source_lang)
+            target_code = LANGUAGE_MAPPING.get(target_lang, target_lang)
+            
+            translator = GoogleTranslator(source=source_code, target=target_code)
+            result = translator.translate(text)
+            
+            logger.info(f"Translated {field_name} from {source_lang} to {target_lang}")
+            return field_name, result
+            
+        except Exception as e:
+            logger.error(f"Translation failed for {text_info['field_name']}: {e}")
+            return text_info['field_name'], text_info['text']
+
+    # Создаем задачи для всех переводов
+    tasks = []
+    for text_info in texts_to_translate:
+        task = asyncio.create_task(translate_single(text_info))
+        tasks.append(task)
+    
+    # Выполняем все переводы параллельно
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Формируем результат
+    translation_dict = {}
+    for result in results:
+        if isinstance(result, Exception):
+            logger.error(f"Translation task failed: {result}")
+            continue
+        field_name, translated_text = result
+        translation_dict[field_name] = translated_text
+    
+    return translation_dict
+
+async def translate_text_batch_with_semaphore(texts_to_translate: list, max_concurrent: int = 5) -> Dict[str, str]:
+    """
+    Асинхронный перевод нескольких текстов с ограничением одновременных запросов
+    """
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def translate_single(text_info):
+        async with semaphore:
+            try:
+                source_lang = text_info['source_lang']
+                target_lang = text_info['target_lang']
+                text = text_info['text']
+                field_name = text_info['field_name']
+                
+                if not text or not text.strip() or source_lang == target_lang:
+                    return field_name, text
+                
+                source_code = LANGUAGE_MAPPING.get(source_lang, source_lang)
+                target_code = LANGUAGE_MAPPING.get(target_lang, target_lang)
+                
+                translator = GoogleTranslator(source=source_code, target=target_code)
+                result = translator.translate(text)
+                
+                logger.info(f"Translated {field_name} from {source_lang} to {target_lang}")
+                return field_name, result
+                
+            except Exception as e:
+                logger.error(f"Translation failed for {text_info['field_name']}: {e}")
+                return text_info['field_name'], text_info['text']
+
+    # Создаем задачи для всех переводов
+    tasks = []
+    for text_info in texts_to_translate:
+        task = asyncio.create_task(translate_single(text_info))
+        tasks.append(task)
+    
+    # Выполняем все переводы параллельно с ограничением
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Формируем результат
+    translation_dict = {}
+    for result in results:
+        if isinstance(result, Exception):
+            logger.error(f"Translation task failed: {result}")
+            continue
+        field_name, translated_text = result
+        translation_dict[field_name] = translated_text
+    
+    return translation_dict
+
 async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, title_pl: str = None, title_fr: str = None, title_de: str = None,
                                   description_uk: str = None, description_en: str = None, description_pl: str = None, description_fr: str = None, description_de: str = None) -> Dict[str, str]:
     result = {
@@ -82,25 +180,42 @@ async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, 
     primary_title = result[f'title_{primary_lang}']
     primary_description = result[f'description_{primary_lang}']
     
+    # Подготавливаем список всех необходимых переводов
+    texts_to_translate = []
+    
     if primary_title and primary_title.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_lang:
                 field_name = f'title_{lang}'
                 if not result[field_name] or not result[field_name].strip():
-                    translated = await translate_text(primary_title, primary_lang, lang)
-                    if translated:
-                        result[field_name] = translated
-                        result['auto_translated_fields'].append(field_name)
+                    texts_to_translate.append({
+                        'field_name': field_name,
+                        'text': primary_title,
+                        'source_lang': primary_lang,
+                        'target_lang': lang
+                    })
     
     if primary_description and primary_description.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_lang:
                 field_name = f'description_{lang}'
                 if not result[field_name] or not result[field_name].strip():
-                    translated = await translate_text(primary_description, primary_lang, lang)
-                    if translated:
-                        result[field_name] = translated
-                        result['auto_translated_fields'].append(field_name)
+                    texts_to_translate.append({
+                        'field_name': field_name,
+                        'text': primary_description,
+                        'source_lang': primary_lang,
+                        'target_lang': lang
+                    })
+    
+    # Выполняем все переводы параллельно с ограничением одновременных запросов
+    if texts_to_translate:
+        translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
+        
+        # Обновляем результат
+        for field_name, translated_text in translation_results.items():
+            if translated_text and translated_text.strip():
+                result[field_name] = translated_text
+                result['auto_translated_fields'].append(field_name)
     
     return result
 
@@ -123,6 +238,9 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
     primary_lang_name = detect_primary_language(name_uk, name_en, name_pl, name_fr, name_de)
     primary_lang_desc = detect_primary_language(description_uk, description_en, description_pl, description_fr, description_de)
     
+    # Подготавливаем список всех необходимых переводов
+    texts_to_translate = []
+    
     if primary_lang_name:
         primary_name = result[f'company_name_{primary_lang_name}']
         if primary_name and primary_name.strip():
@@ -130,10 +248,12 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
                 if lang != primary_lang_name:
                     field_name = f'company_name_{lang}'
                     if not result[field_name] or not result[field_name].strip():
-                        translated = await translate_text(primary_name, primary_lang_name, lang)
-                        if translated:
-                            result[field_name] = translated
-                            result['auto_translated_fields'].append(field_name)
+                        texts_to_translate.append({
+                            'field_name': field_name,
+                            'text': primary_name,
+                            'source_lang': primary_lang_name,
+                            'target_lang': lang
+                        })
     
     if primary_lang_desc:
         primary_desc = result[f'company_description_{primary_lang_desc}']
@@ -142,10 +262,22 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
                 if lang != primary_lang_desc:
                     field_name = f'company_description_{lang}'
                     if not result[field_name] or not result[field_name].strip():
-                        translated = await translate_text(primary_desc, primary_lang_desc, lang)
-                        if translated:
-                            result[field_name] = translated
-                            result['auto_translated_fields'].append(field_name)
+                        texts_to_translate.append({
+                            'field_name': field_name,
+                            'text': primary_desc,
+                            'source_lang': primary_lang_desc,
+                            'target_lang': lang
+                        })
+    
+    # Выполняем все переводы параллельно с ограничением одновременных запросов
+    if texts_to_translate:
+        translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
+        
+        # Обновляем результат
+        for field_name, translated_text in translation_results.items():
+            if translated_text and translated_text.strip():
+                result[field_name] = translated_text
+                result['auto_translated_fields'].append(field_name)
     
     return result
 
