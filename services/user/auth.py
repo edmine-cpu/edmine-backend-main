@@ -68,8 +68,8 @@ class AuthMixin:
             value=jwt_token,
             max_age=60 * 60 * 24 * 7,  # 7 дней
             httponly=True,
-            secure=True,
-            samesite="none",
+            secure=False,
+            samesite="lax",
             path="/",
         )
 

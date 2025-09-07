@@ -39,7 +39,7 @@ async def login_post(login_data: UserLoginForm):
 
 @router.post("/logout")
 async def logout_user(response: Response):
-    response.delete_cookie(key= JWT_COOKIE_NAME, httponly=True, samesite="none", secure=True, path="/")
+    response.delete_cookie(key= JWT_COOKIE_NAME, httponly=True, samesite="lax", secure=False, path="/")
     return {"detail": "Logged out"}
 
 
