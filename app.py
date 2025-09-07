@@ -128,7 +128,7 @@ app.mount("/static", OptimizedStaticFiles(directory="static"), name="static")
 
 register_tortoise(
     app,
-    db_url="postgres://postgres:Ns290872erh@127.0.0.1:5432/makeasap",
+    db_url="postgres://postgres:Ns290872erh@82.25.86.30:5432/makeasap",
     modules={
         "models": [
             "models.user",
