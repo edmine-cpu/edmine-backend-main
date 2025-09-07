@@ -22,7 +22,13 @@ def detect_primary_language_description(description_uk=None, description_en=None
             return lang
     return 'uk'  # дефолт
 
-async def auto_translate_descriptions(
+async def auto_translate_company_fields(
+    name: Optional[str] = None,
+    name_uk: Optional[str] = None,
+    name_en: Optional[str] = None,
+    name_pl: Optional[str] = None,
+    name_fr: Optional[str] = None,
+    name_de: Optional[str] = None,
     description_uk: Optional[str] = None,
     description_en: Optional[str] = None,
     description_pl: Optional[str] = None,
@@ -31,6 +37,12 @@ async def auto_translate_descriptions(
 ) -> Dict[str, Optional[str]]:
 
     result = {
+        'name': name,
+        'name_uk': name_uk or name,  # Используем основное название как украинское
+        'name_en': name_en,
+        'name_pl': name_pl,
+        'name_fr': name_fr,
+        'name_de': name_de,
         'description_uk': description_uk,
         'description_en': description_en,
         'description_pl': description_pl,
@@ -39,25 +51,72 @@ async def auto_translate_descriptions(
         'auto_translated_fields': []
     }
 
-    primary_lang = detect_primary_language_description(
+    # Подготавливаем список всех необходимых переводов
+    from .utils import translate_text_batch_with_semaphore
+    texts_to_translate = []
+    
+    # Определяем основной язык для названия (если есть украинское, используем его)
+    primary_name_lang = 'uk'
+    primary_name = result['name_uk']
+    
+    # Переводим название компании
+    if primary_name and primary_name.strip():
+        for lang in SUPPORTED_LANGUAGES:
+            if lang != primary_name_lang:
+                field_name = f'name_{lang}'
+                if not result[field_name] or not result[field_name].strip():
+                    texts_to_translate.append({
+                        'field_name': field_name,
+                        'text': primary_name,
+                        'source_lang': primary_name_lang,
+                        'target_lang': lang
+                    })
+    
+    # Определяем основной язык для описания
+    primary_desc_lang = detect_primary_language_description(
         description_uk, description_en, description_pl, description_fr, description_de
     )
-    primary_text = result[f'description_{primary_lang}']
+    primary_desc = result[f'description_{primary_desc_lang}']
 
-    if not primary_text or not primary_text.strip():
-        return result  # нечего переводить
-
-    for lang in SUPPORTED_LANGUAGES:
-        if lang != primary_lang:
-            field_name = f'description_{lang}'
-            if not result[field_name] or not result[field_name].strip():
-                try:
-                    translator = GoogleTranslator(source=LANGUAGE_MAPPING[primary_lang], target=LANGUAGE_MAPPING[lang])
-                    translated = translator.translate(primary_text)
-                    result[field_name] = translated
-                    result['auto_translated_fields'].append(field_name)
-                    logger.info(f"Translated description from {primary_lang} to {lang}")
-                except Exception as e:
-                    logger.error(f"Translation failed from {primary_lang} to {lang}: {e}")
+    # Переводим описание компании
+    if primary_desc and primary_desc.strip():
+        for lang in SUPPORTED_LANGUAGES:
+            if lang != primary_desc_lang:
+                field_name = f'description_{lang}'
+                if not result[field_name] or not result[field_name].strip():
+                    texts_to_translate.append({
+                        'field_name': field_name,
+                        'text': primary_desc,
+                        'source_lang': primary_desc_lang,
+                        'target_lang': lang
+                    })
+    
+    # Выполняем все переводы параллельно с ограничением одновременных запросов
+    if texts_to_translate:
+        translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
+        
+        # Обновляем результат
+        for field_name, translated_text in translation_results.items():
+            if translated_text and translated_text.strip():
+                result[field_name] = translated_text
+                result['auto_translated_fields'].append(field_name)
 
     return result
+
+# Совместимость со старым названием функции
+async def auto_translate_descriptions(
+    description_uk: Optional[str] = None,
+    description_en: Optional[str] = None,
+    description_pl: Optional[str] = None,
+    description_fr: Optional[str] = None,
+    description_de: Optional[str] = None
+) -> Dict[str, Optional[str]]:
+    """Обратная совместимость со старым названием функции"""
+    return await auto_translate_company_fields(
+        name=None,
+        description_uk=description_uk,
+        description_en=description_en,
+        description_pl=description_pl,
+        description_fr=description_fr,
+        description_de=description_de
+    )

@@ -245,9 +245,25 @@ class BidService:
             limit: Optional[int] = None,
             sort: Optional[str] = "date_desc",
     ):
-        qs = Bid.all().prefetch_related('country')
+        # Оптимизированный запрос с select_related для уменьшения количества запросов
+        qs = Bid.all().select_related('country', 'author')
 
-        # ИСПРАВЛЕНО: Поиск в JSON массиве categories
+        # Применяем фильтры в порядке селективности (наиболее ограничивающие первыми)
+        
+        # Страна (обычно наиболее селективный фильтр)
+        if country is not None:
+            qs = qs.filter(country_id=country)
+
+        # Город
+        if city:
+            try:
+                city_id = int(city)
+                qs = qs.filter(city=city_id)
+            except ValueError:
+                # Если city не число, игнорируем фильтр
+                pass
+
+        # Категории - ИСПРАВЛЕНО: Поиск в JSON массиве categories
         if category:
             try:
                 category_id = int(category)
@@ -257,31 +273,21 @@ class BidService:
                 # Если category не число, игнорируем фильтр
                 pass
 
-        # ИСПРАВЛЕНО: Поиск в JSON массиве under_categories
+        # Подкатегории - ИСПРАВЛЕНО: Поиск в JSON массиве under_categories
         if subcategory is not None:
             qs = qs.filter(under_categories__contains=[subcategory])
 
-        if country is not None:
-            qs = qs.filter(country_id=country)
-
-        if city:
-            try:
-                city_id = int(city)
-                qs = qs.filter(city=city_id)
-            except ValueError:
-                # Если city не число, игнорируем фильтр
-                pass
-
-        # Поиск по заголовкам и описаниям
+        # Поиск по тексту (наиболее затратный - применяем последним)
         if search:
             search_lower = search.lower()
+            # Оптимизируем поиск - сначала проверяем украинский, потом остальные
             qs = qs.filter(
                 Q(title_uk__icontains=search_lower) |
+                Q(description_uk__icontains=search_lower) |
                 Q(title_en__icontains=search_lower) |
                 Q(title_pl__icontains=search_lower) |
                 Q(title_fr__icontains=search_lower) |
                 Q(title_de__icontains=search_lower) |
-                Q(description_uk__icontains=search_lower) |
                 Q(description_en__icontains=search_lower) |
                 Q(description_pl__icontains=search_lower) |
                 Q(description_fr__icontains=search_lower) |
@@ -298,7 +304,18 @@ class BidService:
         else:  # date_desc, relevance, popular - все по умолчанию по дате
             qs = qs.order_by("-created_at")
 
+        # Ограничиваем результат для защиты от больших выборок
         if limit:
-            qs = qs.limit(limit)
+            qs = qs.limit(min(limit, 100))  # Максимум 100 записей
+        else:
+            qs = qs.limit(20)  # По умолчанию 20 записей
 
         return await qs
+
+    @staticmethod
+    async def get_bid_by_id(bid_id: int):
+        """
+        Получить заявку по ID с данными автора
+        """
+        return await Bid.get_or_none(id=bid_id).select_related('author')
+

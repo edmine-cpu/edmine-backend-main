@@ -105,7 +105,11 @@ async def admin_blog_create(
     if not translations['title'][primary_lang].strip():
         raise HTTPException(status_code=400, detail="Ukrainian title is required")
     
-    # Auto-translate missing fields from Ukrainian
+    # Auto-translate missing fields from Ukrainian using parallel processing
+    from services.translation.utils import translate_text_batch_with_semaphore
+    import asyncio
+    
+    texts_to_translate = []
     for field_name, field_translations in translations.items():
         primary_text = field_translations[primary_lang].strip()
         if not primary_text:
@@ -122,15 +126,35 @@ async def admin_blog_create(
                 )
                 
                 if should_translate:
-                    try:
-                        translated = await translate_text(primary_text, primary_lang, target_lang)
-                        field_translations[target_lang] = translated
-                        auto_translated.append(f'{field_name}_{target_lang}')
-                    except Exception as e:
-                        print(f"Translation error for {field_name}_{target_lang}: {e}")
-                        # Fallback to Ukrainian text if translation fails
-                        field_translations[target_lang] = primary_text
-                        auto_translated.append(f'{field_name}_{target_lang}')
+                    texts_to_translate.append({
+                        'field_name': f'{field_name}_{target_lang}',
+                        'text': primary_text,
+                        'source_lang': primary_lang,
+                        'target_lang': target_lang,
+                        'original_field': field_name,
+                        'target_lang_code': target_lang
+                    })
+    
+    # Выполняем все переводы параллельно
+    if texts_to_translate:
+        try:
+            translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=5)
+            
+            # Обновляем результат
+            for field_key, translated_text in translation_results.items():
+                if translated_text and translated_text.strip():
+                    # Парсим ключ для получения field_name и target_lang
+                    field_name, target_lang = field_key.rsplit('_', 1)
+                    translations[field_name][target_lang] = translated_text
+                    auto_translated.append(field_key)
+        except Exception as e:
+            print(f"Batch translation error: {e}")
+            # Fallback to Ukrainian text for all failed translations
+            for item in texts_to_translate:
+                field_name = item['original_field']
+                target_lang = item['target_lang_code']
+                translations[field_name][target_lang] = item['text']
+                auto_translated.append(f'{field_name}_{target_lang}')
     
     # Create article
     article = await BlogArticle.create(

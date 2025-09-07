@@ -10,6 +10,13 @@ class PaginationParams(BaseModel):
 
 class CompanyCreateSchema(BaseModel):
     name: str = Field(..., max_length=64)
+    
+    # Многоязычные названия (необязательные, будут переведены автоматически)
+    name_uk: Optional[str] = Field(None, max_length=64)
+    name_en: Optional[str] = Field(None, max_length=64)
+    name_pl: Optional[str] = Field(None, max_length=64)
+    name_fr: Optional[str] = Field(None, max_length=64)
+    name_de: Optional[str] = Field(None, max_length=64)
 
     description_uk: Optional[str] = Field(None, max_length=1024)
     description_en: Optional[str] = Field(None, max_length=1024)
@@ -34,6 +41,13 @@ class CompanyCreateSchema(BaseModel):
 
 class CompanyUpdateSchema(BaseModel):
     name: Optional[str] = Field(None, max_length=64)
+    
+    # Многоязычные названия
+    name_uk: Optional[str] = Field(None, max_length=64)
+    name_en: Optional[str] = Field(None, max_length=64)
+    name_pl: Optional[str] = Field(None, max_length=64)
+    name_fr: Optional[str] = Field(None, max_length=64)
+    name_de: Optional[str] = Field(None, max_length=64)
 
     description_uk: Optional[str] = Field(None, max_length=256)
     description_en: Optional[str] = Field(None, max_length=256)

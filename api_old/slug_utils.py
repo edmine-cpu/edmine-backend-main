@@ -116,4 +116,29 @@ async def generate_user_slugs(name: str, user_id: int, company_name_uk: str = ''
     slugs['slug_fr'] = f"{generate_slug(base_name_fr, 'fr')}-{user_id}"
     slugs['slug_de'] = f"{generate_slug(base_name_de, 'de')}-{user_id}"
     
+    return slugs
+
+
+async def generate_company_slugs(name_uk: str = '', name_en: str = '', name_pl: str = '', name_fr: str = '', name_de: str = '', company_id: int = None) -> Dict[str, str]:
+    """Генерирует slug'и для компании на всех языках"""
+    slugs = {}
+    
+    # Генерируем slug для каждого языка из соответствующего названия
+    if name_uk:
+        slugs['slug_uk'] = generate_slug(name_uk, 'uk')
+    if name_en:
+        slugs['slug_en'] = generate_slug(name_en, 'en')
+    if name_pl:
+        slugs['slug_pl'] = generate_slug(name_pl, 'pl')
+    if name_fr:
+        slugs['slug_fr'] = generate_slug(name_fr, 'fr')
+    if name_de:
+        slugs['slug_de'] = generate_slug(name_de, 'de')
+    
+    # Если есть ID, добавляем его в конец
+    if company_id:
+        for lang in ['uk', 'en', 'pl', 'fr', 'de']:
+            if f'slug_{lang}' in slugs:
+                slugs[f'slug_{lang}'] = f"{slugs[f'slug_{lang}']}-{company_id}"
+    
     return slugs 

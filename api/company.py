@@ -1,5 +1,5 @@
 from typing import Annotated, Optional
-from fastapi import APIRouter, Depends, Request, Query
+from fastapi import APIRouter, Depends, Request, Query, HTTPException
 
 from routers.secur import get_current_user
 from schemas.company import PaginationParams, CompanyCreateSchema, CompanyUpdateSchema
@@ -39,6 +39,30 @@ async def get_company_by_id(company_id: int):
     company = await CompanyService.get_company_by_id(company_id)
     return company
 
+@router.get('/companies/slug/{slug_with_id}')
+async def get_company_by_slug(slug_with_id: str):
+    """
+    Получить компанию по слагу в формате slug-id
+    """
+    # Парсим slug-id
+    if '-' not in slug_with_id:
+        raise HTTPException(status_code=400, detail="Invalid slug format. Expected: slug-id")
+    
+    # Извлекаем ID из конца строки
+    parts = slug_with_id.rsplit('-', 1)
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Invalid slug format. Expected: slug-id")
+    
+    slug_part, id_part = parts
+    
+    try:
+        company_id = int(id_part)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company ID in slug")
+    
+    company = await CompanyService.get_company_by_slug_and_id(slug_part, company_id)
+    return company
+
 
 @router.get('/companies/slug/{company_slug}/{company_id}')
 async def get_company_by_slug(company_slug: str, company_id: str):
@@ -55,6 +79,14 @@ async def get_company_by_owner(request: Request):
 @router.post('/companies')
 async def create_company(request: Request, company: CompanyCreateSchema):
     result = await CompanyService.create_company(request, company)
+    return result
+
+@router.post('/companies-fast')
+async def create_company_fast(request: Request, company: CompanyCreateSchema):
+    """
+    Сверхбыстрое создание компании с ленивым переводом в фоне
+    """
+    result = await CompanyService.create_company_fast(request, company)
     return result
 
 

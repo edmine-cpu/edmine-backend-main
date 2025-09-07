@@ -48,7 +48,13 @@ class User(models.Model):
 class Company(models.Model):
     id = fields.IntField(pk=True)
 
-    name = fields.CharField(max_length=64)
+    name = fields.CharField(max_length=64)  # Основное название
+    name_uk = fields.CharField(max_length=64, null=True)
+    name_en = fields.CharField(max_length=64, null=True)
+    name_pl = fields.CharField(max_length=64, null=True)
+    name_fr = fields.CharField(max_length=64, null=True)
+    name_de = fields.CharField(max_length=64, null=True)
+    
     description_uk = fields.TextField(null=True)
     description_en = fields.TextField(null=True)
     description_pl = fields.TextField(null=True)
@@ -56,6 +62,11 @@ class Company(models.Model):
     description_de = fields.TextField(null=True)
 
     slug_name = fields.CharField(max_length=64, null=True)
+    slug_uk = fields.CharField(max_length=128, null=True)
+    slug_en = fields.CharField(max_length=128, null=True)
+    slug_pl = fields.CharField(max_length=128, null=True)
+    slug_fr = fields.CharField(max_length=128, null=True)
+    slug_de = fields.CharField(max_length=128, null=True)
 
     city = fields.TextField(null=True)
     country = fields.TextField(null=True)
@@ -64,6 +75,10 @@ class Company(models.Model):
     subcategories = fields.ManyToManyField('models.UnderCategory', related_name='company', null=True)
 
     owner = fields.ForeignKeyField('models.User', related_name='companies', null=True)
+    
+    auto_translated_fields = fields.JSONField(null=True)
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
 
     #completed_bids = ...
 
