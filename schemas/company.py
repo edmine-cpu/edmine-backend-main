@@ -11,7 +11,6 @@ class PaginationParams(BaseModel):
 class CompanyCreateSchema(BaseModel):
     name: str = Field(..., max_length=64)
     
-    # Многоязычные названия (необязательные, будут переведены автоматически)
     name_uk: Optional[str] = Field(None, max_length=64)
     name_en: Optional[str] = Field(None, max_length=64)
     name_pl: Optional[str] = Field(None, max_length=64)

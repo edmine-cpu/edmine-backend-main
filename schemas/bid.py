@@ -53,7 +53,7 @@ class BidResponse(BaseModel):
     email: str
 
     class Config:
-        orm_mode = True
+        from_atributes = True
 
 
 class BidVerifyRequest(BaseModel):

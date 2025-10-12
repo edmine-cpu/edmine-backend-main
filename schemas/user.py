@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import List, Optional, Dict, Annotated, Any
 
 
@@ -32,7 +32,7 @@ class UserRegisterForm(BaseModel):
     categories: Optional[List[str]] = []
     subcategories: Optional[List[str]] = []
 
-    @validator('language')
+    @field_validator('language')
     def check_language(cls, v):
         allowed = {'uk', 'en', 'pl', 'de', 'fr'}
         if v not in allowed:
