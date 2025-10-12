@@ -15,38 +15,14 @@ from api.places import router as places_get_router
 from api.profile import router as profile_router
 from api.user import router as user_router
 from api.company import router as company_router
-# from routers.bid import router as bid_router
 from routers.secur import router as jwt_router
-# from middleware.cache import SimpleCacheMiddleware  # Убираем кэширование
 
-app = FastAPI(
-    title="EdMine API",
-    description="Оптимизированное API для EdMine",
-    version="2.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+app = FastAPI()
 
-# Middleware для логирования производительности
-@app.middleware("http")
-async def performance_middleware(request: Request, call_next):
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-    
-    # Логируем медленные запросы
-    if process_time > 1.0:  # Больше 1 секунды
-        print(f"🐌 Медленный запрос: {request.method} {request.url.path} - {process_time:.2f}s")
-    
-    response.headers["X-Process-Time"] = str(process_time)
-    return response
-
-# Middleware безопасности
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
     response = await call_next(request)
     
-    # Добавляем заголовки безопасности
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -54,13 +30,9 @@ async def security_middleware(request: Request, call_next):
     
     return response
 
-# Кэширование отключено для упрощения
-# app.add_middleware(SimpleCacheMiddleware)
 
-# Добавляем сжатие
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Оптимизированный CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -71,7 +43,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=86400,  # Кэшируем preflight запросы на 24 часа
+    max_age=86400, 
 )
 
 
@@ -88,17 +60,14 @@ app.include_router(password_reset_router, prefix="/api", tags=["Password Reset"]
 app.include_router(company_router, prefix="/api", tags=["Company"])
 
 
-# Оптимизированное обслуживание статических файлов
 class OptimizedStaticFiles(StaticFiles):
     def __init__(self, directory: str):
         super().__init__(directory=directory)
     
     async def __call__(self, scope, receive, send):
-        # Добавляем кэширующие заголовки для статических файлов
         if scope["type"] == "http":
             path = scope["path"]
             
-            # Определяем тип файла и TTL кэширования
             if path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.ico')):
                 cache_control = "public, max-age=86400"  # 24 часа для изображений
             elif path.endswith(('.css', '.js')):
