@@ -17,6 +17,8 @@ class Bid(models.Model):
     slug_fr = fields.CharField(max_length=256, null=True)
     slug_de = fields.CharField(max_length=256, null=True)
 
+    main_language = fields.CharField(max_length=2, default='en', null=True)  # Основной язык: uk, en, pl, fr, de
+
     categories = fields.JSONField(null=True)  # Список категорий
     under_categories = fields.JSONField(null=True)  # Список подкатегорий
 

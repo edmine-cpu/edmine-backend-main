@@ -44,6 +44,22 @@ class BidService:
         request_data["files"] = file_paths
         request_data["delete_token"] = secrets.token_urlsafe(DELETE_TOKEN_LENGTH)
 
+        # Определяем основной язык бида
+        from services.translation.utils import detect_primary_language
+        main_language = detect_primary_language(
+            title_uk=request_data.get('title_uk'),
+            title_en=request_data.get('title_en'),
+            title_pl=request_data.get('title_pl'),
+            title_fr=request_data.get('title_fr'),
+            title_de=request_data.get('title_de'),
+            description_uk=request_data.get('description_uk'),
+            description_en=request_data.get('description_en'),
+            description_pl=request_data.get('description_pl'),
+            description_fr=request_data.get('description_fr'),
+            description_de=request_data.get('description_de')
+        )
+        request_data['main_language'] = main_language
+
         # ДОБАВЛЯЕМ АВТОПЕРЕВОД
         translation_result = await auto_translate_bid_fields(
             title_uk=request_data.get('title_uk'),
@@ -121,16 +137,32 @@ class BidService:
         request_data = data.dict()
         request_data["author"] = current_user
         request_data["delete_token"] = secrets.token_urlsafe(DELETE_TOKEN_LENGTH)
-        
+
+        # Определяем основной язык бида
+        from services.translation.utils import detect_primary_language
+        main_language = detect_primary_language(
+            title_uk=request_data.get('title_uk'),
+            title_en=request_data.get('title_en'),
+            title_pl=request_data.get('title_pl'),
+            title_fr=request_data.get('title_fr'),
+            title_de=request_data.get('title_de'),
+            description_uk=request_data.get('description_uk'),
+            description_en=request_data.get('description_en'),
+            description_pl=request_data.get('description_pl'),
+            description_fr=request_data.get('description_fr'),
+            description_de=request_data.get('description_de')
+        )
+        request_data['main_language'] = main_language
+
         # Ждем завершения обработки файлов
         file_paths = await file_paths_task
         request_data["files"] = file_paths
-        
+
         # Создаем заявку сразу (без переводов)
         bid = await BidCRUD.create_bid(request_data)
-        
+
         # Генерируем слаги для основного языка
-        primary_lang = 'uk'  # или определять динамически
+        primary_lang = main_language
         primary_title = request_data.get(f'title_{primary_lang}', '')
         if primary_title:
             from api_old.slug_utils import generate_slug
