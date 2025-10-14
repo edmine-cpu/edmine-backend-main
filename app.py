@@ -3,8 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from tortoise.contrib.fastapi import register_tortoise
-import time
-
+import os
+from dotenv import load_dotenv
 from api.admin import router as admin_router
 from api.bids import router as bids_router
 from api.blog import router as blog_router
@@ -94,10 +94,12 @@ class OptimizedStaticFiles(StaticFiles):
 
 app.mount("/static", OptimizedStaticFiles(directory="static"), name="static")
 
+load_dotenv()
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 register_tortoise(
     app,
-    db_url="postgres://postgres:Ns290872erh@0.0.0.0:5432/makeasap",
+    db_url=f"postgres://postgres:{DB_PASSWORD}@0.0.0.0:5432/makeasap_dev",
     modules={
         "models": [
             "models.user",

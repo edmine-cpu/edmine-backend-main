@@ -1,21 +1,33 @@
 from tortoise import Tortoise, run_async
 from models import Category
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+
 
 async def init():
     await Tortoise.init(
-        db_url='postgres://postgres:Ns290872erh@localhost:5432/makeasap',
+        db_url=f'postgres://postgres:{DB_PASSWORD}@localhost:5432/makeasap_dev',
         modules={'models': ['models']}
     )
     await Tortoise.generate_schemas()
 
     # Список категорий с переводами
     categories = [
-        {'name': 'plumbing', 'name_uk': 'Сантехніка', 'name_en': 'Plumbing', 'name_pl': 'Hydraulika'},
-        {'name': 'electrical', 'name_uk': 'Електрика', 'name_en': 'Electrical', 'name_pl': 'Elektryka'},
-        {'name': 'repair', 'name_uk': 'Ремонт', 'name_en': 'Repair', 'name_pl': 'Naprawa'},
-        {'name': 'cleaning', 'name_uk': 'Прибирання', 'name_en': 'Cleaning', 'name_pl': 'Sprzątanie'},
-        {'name': 'other', 'name_uk': 'Інше', 'name_en': 'Other', 'name_pl': 'Inne'}
+        {'name': 'web_development', 'name_uk': 'Веб-розробка', 'name_en': 'Web Development', 'name_pl': 'Tworzenie stron WWW'},
+        {'name': 'mobile_development', 'name_uk': 'Мобільна розробка', 'name_en': 'Mobile Development', 'name_pl': 'Tworzenie aplikacji mobilnych'},
+        {'name': 'graphic_design', 'name_uk': 'Графічний дизайн', 'name_en': 'Graphic Design', 'name_pl': 'Projektowanie graficzne'},
+        {'name': 'digital_marketing', 'name_uk': 'Цифровий маркетинг', 'name_en': 'Digital Marketing', 'name_pl': 'Marketing cyfrowy'},
+        {'name': 'writing', 'name_uk': 'Написання текстів', 'name_en': 'Writing', 'name_pl': 'Pisanie tekstów'},
+        {'name': 'translation', 'name_uk': 'Переклади', 'name_en': 'Translation', 'name_pl': 'Tłumaczenia'},
+        {'name': 'video_editing', 'name_uk': 'Відеомонтаж', 'name_en': 'Video Editing', 'name_pl': 'Montaż wideo'},
+        {'name': 'seo', 'name_uk': 'SEO', 'name_en': 'SEO', 'name_pl': 'SEO'},
+        {'name': 'virtual_assistant', 'name_uk': 'Віртуальний асистент', 'name_en': 'Virtual Assistant', 'name_pl': 'Wirtualny Asystent'},
+        {'name': 'ui_ux_design', 'name_uk': 'UI/UX дизайн', 'name_en': 'UI/UX Design', 'name_pl': 'Projektowanie UI/UX'},
     ]
+
 
     await Category.all().delete()  # Очистка существующих категорий
 

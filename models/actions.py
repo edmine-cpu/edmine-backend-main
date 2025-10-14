@@ -26,7 +26,7 @@ class Bid(models.Model):
     description_fr = fields.TextField(max_length=2048, null=True)
     description_de = fields.TextField(max_length=2048, null=True)
 
-    city = fields.IntField(null=True)
+    city = fields.ForeignKeyField('models.City', related_name='bids', null=True)
     country = fields.ForeignKeyField('models.Country', related_name='bids', null=True)
 
     author = fields.ForeignKeyField('models.User', related_name='bids', null=True)

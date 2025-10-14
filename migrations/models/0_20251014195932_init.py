@@ -124,7 +124,6 @@ CREATE TABLE IF NOT EXISTS "bids" (
     "description_pl" TEXT,
     "description_fr" TEXT,
     "description_de" TEXT,
-    "city" INT,
     "budget" VARCHAR(32),
     "budget_type" VARCHAR(8),
     "files" JSONB,
@@ -133,6 +132,7 @@ CREATE TABLE IF NOT EXISTS "bids" (
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "author_id" INT REFERENCES "users" ("id") ON DELETE CASCADE,
+    "city_id" INT REFERENCES "cities" ("id") ON DELETE CASCADE,
     "country_id" INT REFERENCES "countries" ("id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "blog_articles" (
@@ -178,14 +178,27 @@ CREATE TABLE IF NOT EXISTS "chats" (
 CREATE TABLE IF NOT EXISTS "company" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(64) NOT NULL,
+    "name_uk" VARCHAR(64),
+    "name_en" VARCHAR(64),
+    "name_pl" VARCHAR(64),
+    "name_fr" VARCHAR(64),
+    "name_de" VARCHAR(64),
     "description_uk" TEXT,
     "description_en" TEXT,
     "description_pl" TEXT,
     "description_fr" TEXT,
     "description_de" TEXT,
     "slug_name" VARCHAR(64),
+    "slug_uk" VARCHAR(128),
+    "slug_en" VARCHAR(128),
+    "slug_pl" VARCHAR(128),
+    "slug_fr" VARCHAR(128),
+    "slug_de" VARCHAR(128),
     "city" TEXT,
     "country" TEXT,
+    "auto_translated_fields" JSONB,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "owner_id" INT REFERENCES "users" ("id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "messages" (

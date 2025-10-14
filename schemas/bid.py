@@ -14,8 +14,7 @@ class BidCreateRequest(BaseModel):
     description_fr: Optional[str] = ""
     description_de: Optional[str] = ""
 
-    category: Optional[List[int]] = None
-    under_category: Optional[List[int]] = None
+    
     country: Optional[int] = None
     city: Optional[int] = None
 
@@ -24,6 +23,9 @@ class BidCreateRequest(BaseModel):
 
     auto_translated_fields: Optional[List[str]] = []
     temp_files: Optional[List[str]] = []
+
+    category: Optional[List[int]] = None
+    under_category: Optional[List[int]] = None
 
     @field_validator("category", "under_category", mode="before")
     def convert_to_int_list(cls, v):

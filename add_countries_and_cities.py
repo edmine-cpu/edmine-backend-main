@@ -6,9 +6,13 @@ from tortoise import Tortoise, run_async
 from models import Country, City
 from api_old.slug_utils import generate_slug
 
+from dotenv import load_dotenv
+load_dotenv()
+DB_PASSWORD = os.getenv("DB_PASSWORD", "WordPass_!forPostgres_%40")
+
 async def init():
     await Tortoise.init(
-        db_url='postgres://postgres:Ns290872erh@localhost:5432/makeasap',
+        db_url=f'postgres://postgres:{DB_PASSWORD}@localhost:5432/makeasap_dev',
         modules={"models": [
             "models.user",
             "models.actions",
