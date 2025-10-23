@@ -15,7 +15,8 @@ from api.places import router as places_get_router
 from api.profile import router as profile_router
 from api.user import router as user_router
 from api.company import router as company_router
-from api.v2.bids import router as bids_v2_router
+from api.v2.request import router as request_v2_router
+from api.v2.company import router as company_v2_router
 from routers.secur import router as jwt_router
 
 app = FastAPI()
@@ -53,7 +54,8 @@ app.include_router(categories_get_router, prefix="/check", tags=["Categories"])
 app.include_router(places_get_router, prefix="/api", tags=["Places"])
 app.include_router(user_router, prefix="/api", tags=["Users"])
 app.include_router(bids_router, prefix="/api", tags=["Bids"])
-app.include_router(bids_v2_router, prefix="/api/v2", tags=["Bids V2"])
+app.include_router(request_v2_router, prefix="/api/v2/request", tags=["Requests V2"])
+app.include_router(company_v2_router, prefix="/api/v2/company", tags=["Company V2"])
 app.include_router(chat_router, prefix="/api", tags=["Chat"])
 app.include_router(profile_router, prefix="/api", tags=["Profile"])
 app.include_router(admin_router, prefix="/api", tags=["Admin"])

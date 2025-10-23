@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 from typing import Annotated, Optional
-from schemas.v2.bids import BidsListResponse, BidSearchParams
-from services.v2.bids import get_bids_filtered
+from schemas.v2.request import BidsListResponse, BidSearchParams
+from services.v2.request import get_bids_filtered
 
 SUPPORTED_LANGUAGES = ["en", "uk", "pl", "de", "fr"]
 router = APIRouter()
@@ -14,10 +14,10 @@ router = APIRouter()
 )
 async def get_bids_filtered_list(
     language: Annotated[Optional[str], Query(description="Язык (uk, en, pl, de, fr)")] = None,
-    country: Annotated[Optional[str], Query(description="Slug страны")] = None,
-    city: Annotated[Optional[str], Query(description="Slug города")] = None,
-    category: Annotated[Optional[str], Query(description="Slug категории")] = None,
-    subcategory: Annotated[Optional[str], Query(description="Slug подкатегории")] = None,
+    country_id: Annotated[Optional[int], Query(ge=1, description="ID страны")] = None,
+    city_id: Annotated[Optional[int], Query(ge=1, description="ID города")] = None,
+    category_id: Annotated[Optional[int], Query(ge=1, description="ID категории")] = None,
+    subcategory_id: Annotated[Optional[int], Query(ge=1, description="ID подкатегории")] = None,
     search: Annotated[Optional[str], Query(description="Поисковый запрос")] = None,
     min_cost: Annotated[Optional[int], Query(ge=0, description="Минимальная цена")] = None,
     max_cost: Annotated[Optional[int], Query(ge=0, description="Максимальная цена")] = None,
@@ -26,10 +26,10 @@ async def get_bids_filtered_list(
     Получение списка бидов (заказов) с опциональными фильтрами
 
     - **language**: Язык (uk, en, pl, de, fr) - дефолт: en
-    - **country**: Slug страны (опционально)
-    - **city**: Slug города (опционально)
-    - **category**: Slug категории (опционально)
-    - **subcategory**: Slug подкатегории (опционально)
+    - **country_id**: ID страны (опционально)
+    - **city_id**: ID города (опционально)
+    - **category_id**: ID категории (опционально)
+    - **subcategory_id**: ID подкатегории (опционально)
     - **search**: Текстовый поиск по названию и описанию
     - **min_cost**: Минимальная стоимость бюджета
     - **max_cost**: Максимальная стоимость бюджета
@@ -53,10 +53,10 @@ async def get_bids_filtered_list(
 
     result = await get_bids_filtered(
         language=language,
-        country_slug=country,
-        city_slug=city,
-        category_slug=category,
-        subcategory_slug=subcategory,
+        country_id=country_id,
+        city_id=city_id,
+        category_id=category_id,
+        subcategory_id=subcategory_id,
         search=search,
         min_cost=min_cost,
         max_cost=max_cost

@@ -41,6 +41,10 @@ class BidsListResponse(BaseModel):
     city: Optional[str] = None
     category: Optional[str] = None
     subcategory: Optional[str] = None
+    country_id: Optional[int] = None
+    city_id: Optional[int] = None
+    category_id: Optional[int] = None
+    subcategory_id: Optional[int] = None
     lang_search: str
     min_cost: Optional[int] = None
     max_cost: Optional[int] = None
