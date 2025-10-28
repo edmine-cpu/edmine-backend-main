@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from tortoise.contrib.fastapi import register_tortoise
 import os
 from dotenv import load_dotenv
@@ -18,35 +19,48 @@ from api.company import router as company_router
 from api.v2.request import router as request_v2_router
 from api.v2.company import router as company_v2_router
 from routers.secur import router as jwt_router
+from admin_panel import setup_admin
 
 app = FastAPI()
 
-@app.middleware("http")
-async def security_middleware(request: Request, call_next):
-    response = await call_next(request)
-    
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    
-    return response
-
-
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Добавляем SessionMiddleware для работы админки - ВАЖНО: должен быть первым!
+app.add_middleware(
+    SessionMiddleware,
+    secret_key="your-super-secret-key-change-in-production",
+    session_cookie="admin_session",
+    max_age=3600,  # 1 час
+    same_site="lax",
+    https_only=False  # Для разработки, в продакшене установить True
+)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://82.25.86.30:3000",
+        "http://localhost:8000",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
-    max_age=86400, 
+    max_age=86400,
 )
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+@app.middleware("http")
+async def security_middleware(request: Request, call_next):
+    response = await call_next(request)
+
+    # Не применяем строгие заголовки для админки
+    if not request.url.path.startswith("/admin"):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    return response
 
 
 app.include_router(jwt_router, prefix="", tags=["Auth"])
@@ -62,6 +76,9 @@ app.include_router(admin_router, prefix="/api", tags=["Admin"])
 app.include_router(blog_router, prefix="/api", tags=["Blog"])
 app.include_router(password_reset_router, prefix="/api", tags=["Password Reset"])
 app.include_router(company_router, prefix="/api", tags=["Company"])
+
+# Настройка админ-панели по адресу /admin
+setup_admin(app)
 
 
 class OptimizedStaticFiles(StaticFiles):
