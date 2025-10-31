@@ -6,7 +6,6 @@ import secrets
 import os
 import sys
 
-# Добавляем корневую директорию проекта в путь
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tortoise import Tortoise
@@ -201,7 +200,6 @@ async def create_test_bids():
             print(f"✅ Создан бид #{created_count}: {title} (ID: {bid.id}, язык: {main_lang})")
 
         except Exception as e:
-            print(f"❌ Ошибка при создании бида #{i+1}: {e}")
 
     print(f"\n🎉 Создано {created_count} из {len(test_bids_data)} тестовых бидов")
 

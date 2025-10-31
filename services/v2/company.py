@@ -28,7 +28,7 @@ async def get_companies_filtered(
         dict с результатами и метаданными
     """
 
-    # Валидация языка для защиты от инъекций (defense-in-depth)
+    ация языка для защиты от инъекций (defense-in-depth)
     ALLOWED_LANGUAGES = ['uk', 'en', 'pl', 'de', 'fr']
     if language not in ALLOWED_LANGUAGES:
         language = 'en'  # Fallback на безопасное значение

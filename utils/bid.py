@@ -50,7 +50,6 @@ async def _validate_uploaded_files(
 
         return temp_file_path
 
-    # Обрабатываем все файлы параллельно
     tasks = [process_single_file(file) for file in files]
     temp_file_paths = await asyncio.gather(*tasks)
     
@@ -81,11 +80,9 @@ async def _move_files_to_final_location(temp_file_paths: List[str]) -> List[str]
         os.rename(temp_path, final_path)
         return final_path
 
-    # Перемещаем все файлы параллельно
     tasks = [move_single_file(temp_path) for temp_path in temp_file_paths]
     results = await asyncio.gather(*tasks)
     
-    # Фильтруем None значения
     final_file_paths = [path for path in results if path is not None]
 
     return final_file_paths

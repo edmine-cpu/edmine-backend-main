@@ -289,7 +289,6 @@ async def get_dashboard_stats(admin: User = Depends(require_admin)):
 #             "pages": (total + limit - 1) // limit
 #         }
 #     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Ошибка получения пользователей: {str(e)}")
 
 @router.put("/admin/users/{user_id}/role")
 async def update_user_role(
@@ -325,17 +324,13 @@ async def update_user_role(
 #     try:
 #         user = await User.get_or_none(id=user_id)
 #         if not user:
-#             raise HTTPException(status_code=404, detail="Пользователь не найден")
 #         
 #         if user.role == 1:
-#             raise HTTPException(status_code=400, detail="Нельзя удалить администратора")
 #         
 #         await user.delete()
-#         return {"message": "Пользователь удален", "user_id": user_id}
 #     except HTTPException:
 #         raise
 #     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Ошибка удаления пользователя: {str(e)}")
 
 @router.get("/admin/bids")
 async def get_bids(

@@ -22,14 +22,13 @@ from admin_panel import setup_admin
 
 app = FastAPI()
 
-# Добавляем SessionMiddleware для работы админки - ВАЖНО: должен быть первым!
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SESSION_SECRET_KEY,
     session_cookie="admin_session",
-    max_age=3600,  # 1 час
+    max_age=3600,
     same_site="lax",
-    https_only=False  # Для разработки, в продакшене установить True
+    https_only=False
 )
 
 app.add_middleware(
@@ -52,7 +51,6 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 async def security_middleware(request: Request, call_next):
     response = await call_next(request)
 
-    # Не применяем строгие заголовки для админки
     if not request.url.path.startswith("/admin"):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -76,7 +74,6 @@ app.include_router(blog_router, prefix="/api", tags=["Blog"])
 app.include_router(password_reset_router, prefix="/api", tags=["Password Reset"])
 app.include_router(company_router, prefix="/api", tags=["Company"])
 
-# Настройка админ-панели по адресу /admin
 setup_admin(app)
 
 
@@ -87,17 +84,16 @@ class OptimizedStaticFiles(StaticFiles):
     async def __call__(self, scope, receive, send):
         if scope["type"] == "http":
             path = scope["path"]
-            
+
             if path.endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp', '.ico')):
-                cache_control = "public, max-age=86400"  # 24 часа для изображений
+                cache_control = "public, max-age=86400"
             elif path.endswith(('.css', '.js')):
-                cache_control = "public, max-age=3600"   # 1 час для CSS/JS
+                cache_control = "public, max-age=3600"
             elif path.endswith(('.pdf', '.txt')):
-                cache_control = "public, max-age=1800"   # 30 минут для документов
+                cache_control = "public, max-age=1800"
             else:
-                cache_control = "public, max-age=300"    # 5 минут для остальных
-            
-            # Переопределяем send для добавления заголовков
+                cache_control = "public, max-age=300"
+
             original_send = send
             
             async def send_with_cache_headers(message):

@@ -60,7 +60,6 @@ async def generate_bid_slugs(title_uk: str = '', title_en: str = '', title_pl: s
     """Генерирует slug'и для заявки на всех языках"""
     slugs = {}
     
-    # Генерируем slug для каждого языка из соответствующего заголовка
     if title_uk:
         slugs['slug_uk'] = generate_slug(title_uk, 'uk')
     if title_en:
@@ -123,7 +122,6 @@ async def generate_company_slugs(name_uk: str = '', name_en: str = '', name_pl: 
     """Генерирует slug'и для компании на всех языках"""
     slugs = {}
     
-    # Генерируем slug для каждого языка из соответствующего названия
     if name_uk:
         slugs['slug_uk'] = generate_slug(name_uk, 'uk')
     if name_en:

@@ -88,7 +88,7 @@
 #     currency = form_data.get('currency') or ''
 #     email = form_data.get('email') or user_email
 #
-#     # Отладка
+
 #     print(f"DEBUG: Received form data for language '{lang}':")
 #     print(f"  title_primary ({lang}): '{title_primary}'")
 #     print(f"  title_uk: '{title_uk}'")
@@ -193,7 +193,7 @@
 #     print(f"  description_pl: '{description_pl}'")
 #     print(f"  auto_translated_fields: {translated_fields['auto_translated_fields']}")
 #
-#     # Чистим строки
+им строки
 #     title_uk = title_uk.strip() if title_uk else ''
 #     title_en = title_en.strip() if title_en else ''
 #     title_pl = title_pl.strip() if title_pl else ''
@@ -353,7 +353,6 @@
 #         bid_id=bid.id
 #     )
 #
-#     # Обновляем заявку с slug'ами
 #     for slug_field, slug_value in bid_slugs.items():
 #         setattr(bid, slug_field, slug_value)
 #     await bid.save()
@@ -446,7 +445,6 @@
 #         bid = await Bid.get(id=bid_id)
 #         categories = await Category.all()
 #
-#         # Проверяем и обновляем основные поля
 #         if not title or not title.strip():
 #             return templates.TemplateResponse('edit_request.html', {
 #                 'request': request,
@@ -483,11 +481,10 @@
 #                 'user_role': user_role
 #             })
 #
-#         # Обновляем основные поля для всех языков
 #         title_primary = title.strip()
 #         description_primary = description.strip()
 #
-#         # Устанавливаем значения для основного языка
+иваем значения для основного языка
 #         if lang == 'uk':
 #             bid.title_uk = title_primary
 #             bid.description_uk = description_primary
@@ -510,11 +507,11 @@
 #         for target_lang in ['uk', 'en', 'pl', 'fr', 'de']:
 #             if target_lang != lang:
 #                 try:
-#                     # Переводим заголовок
+м заголовок
 #                     translated_title = await translate_text(title_primary, lang, target_lang)
 #                     setattr(bid, f'title_{target_lang}', translated_title)
 #
-#                     # Переводим описание
+м описание
 #                     translated_description = await translate_text(description_primary, lang, target_lang)
 #                     setattr(bid, f'description_{target_lang}', translated_description)
 #                 except Exception as e:
@@ -532,7 +529,6 @@
 #         if files:
 #             new_file_paths = []
 #             for file in files:
-#                 # Проверяем расширение файла
 #                 if not file.filename:
 #                     continue
 #
@@ -555,11 +551,9 @@
 #                         'user_role': user_role
 #                     })
 #
-#                 # Генерируем безопасное имя файла
 #                 safe_filename = secrets.token_urlsafe(16).replace('-', '_').replace('=', '_') + file_ext
 #                 file_path = os.path.join(BID_FILES_DIR, safe_filename)
 #
-#                 # Сохраняем файл
 #                 os.makedirs(BID_FILES_DIR, exist_ok=True)
 #                 content = await file.read()
 #                 with open(file_path, 'wb') as f:
@@ -567,7 +561,6 @@
 #
 #                 new_file_paths.append(file_path)
 #
-#             # Объединяем существующие и новые файлы
 #             current_files = bid.files or []
 #             bid.files = current_files + new_file_paths
 #
@@ -699,7 +692,6 @@
 #             'error': 'Email не вказано'
 #         }, status_code=400)
 #
-#     # Проверяем можно ли отправить код
 #     can_send, wait_time = can_send_code(email)
 #     if not can_send:
 #         return JSONResponse({
@@ -707,14 +699,12 @@
 #             'error': f'Спробуйте ще раз через {wait_time} секунд'
 #         }, status_code=429)
 #
-#     # Проверяем есть ли pending request для этого email
 #     if email not in PENDING_REQUESTS:
 #         return JSONResponse({
 #             'success': False,
 #             'error': 'Заявку для цього email не знайдено'
 #         }, status_code=404)
 #
-#     # Генерируем новый код
 #     code = generate_code()
 #     EMAIL_VERIFICATION_CODES[email] = code
 #

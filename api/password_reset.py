@@ -5,25 +5,20 @@ import random
 
 router = APIRouter()
 
-# === Тестовый endpoint ===
 @router.get("/test-password-reset")
 async def test_password_reset():
     return {"message": "Password reset API is working"}
 
 
-# === Утилиты для отправки писем ===
 async def send_reset_email(email: str, code: str):
-    """Отправка кода для сброса пароля"""
+    """Send password reset code"""
     try:
         from api_old.email_utils import send_email
-        print(f"DEBUG: Sending email to {email} with code {code}")
         await send_email(email, code)
-        print("DEBUG: Email sent successfully!")
     except Exception as e:
-        print(f"DEBUG: Failed to send reset email: {e}")
 
 async def send_password_changed_notification(email: str):
-    """Отправка уведомления об успешной смене пароля"""
+    """Send password change notification"""
     try:
         from services.user.email.smtp_client import SMTPClient
         from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
@@ -46,42 +41,32 @@ If you did not change your password, please contact support.
         """
 
         await smtp_client.send_email(email, subject, body)
-        print(f"DEBUG: Password change notification sent to {email}!")
     except Exception as e:
-        print(f"DEBUG: Password change notification failed: {e}")
 
 
-# === Вспомогательная функция для универсального парсинга запроса ===
 async def parse_request(request: Request):
-    """Пытаемся распарсить JSON, если не получилось — form-data"""
+    """Parse request data"""
     try:
         data = await request.json()
-        print(f"DEBUG: JSON data: {data}")
     except Exception:
         form = await request.form()
         data = dict(form)
-        print(f"DEBUG: Form data: {data}")
     return data
 
 
-# === Запрос на сброс пароля ===
 @router.post("/forgot-password")
 async def forgot_password(email: str = Form(...)):
     try:
         user = await User.get_or_none(email=email.lower().strip())
-        # Всегда возвращаем успех для безопасности
         if not user:
             return JSONResponse({"message": "Password reset requested successfully", "email": email})
 
-        # Генерация кода
+        ация кода
         verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-        print(f"DEBUG: Generated verification code for {email}: {verification_code}")
 
-        # Сохраняем код в памяти
         from api_old.auth_api import EMAIL_VERIFICATION_CODES
         EMAIL_VERIFICATION_CODES[email] = verification_code
 
-        # Отправка письма
         await send_reset_email(email, verification_code)
 
         return JSONResponse({"message": "Password reset requested successfully", "email": email})
@@ -91,7 +76,7 @@ async def forgot_password(email: str = Form(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# === Проверка кода сброса пароля ===
+ка кода сброса пароля ===
 @router.post("/verify-reset-code")
 async def verify_reset_code(email: str = Form(...), code: str = Form(...)):
     try:
@@ -105,7 +90,6 @@ async def verify_reset_code(email: str = Form(...), code: str = Form(...)):
         if not user:
             raise HTTPException(status_code=400, detail="Invalid code")
 
-        # Очищаем код
         EMAIL_VERIFICATION_CODES.pop(email, None)
 
         return JSONResponse({"message": "Code verified successfully", "email": email})
@@ -117,7 +101,6 @@ async def verify_reset_code(email: str = Form(...), code: str = Form(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-# === Сброс пароля ===
 @router.post("/reset-password")
 async def reset_password(request: Request):
     data = await parse_request(request)
@@ -135,23 +118,20 @@ async def reset_password(request: Request):
     if not user:
         raise HTTPException(status_code=400, detail="User not found")
 
-    # Хеширование пароля
     from api_old.security import hash_password
     hashed_password = hash_password(new_password)
 
     user.password = hashed_password
     await user.save()
 
-    # Уведомление о смене пароля
     try:
         await send_password_changed_notification(email)
     except Exception as e:
-        print(f"DEBUG: Failed to send password change notification: {e}")
 
     return JSONResponse({"message": "Password successfully reset"})
 
 
-# === Проверка токена сброса пароля ===
+ка токена сброса пароля ===
 @router.get("/verify-reset-token")
 async def verify_reset_token(token: str):
     try:

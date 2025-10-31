@@ -11,11 +11,8 @@ async def send_reset_email(email: str, code: str):
     """Отправка кода для сброса пароля"""
     try:
         from api_old.email_utils import send_email
-        print(f"DEBUG: Sending email to {email} with code {code}")
         await send_email(email, code)
-        print("DEBUG: Email sent successfully!")
     except Exception as e:
-        print(f"DEBUG: Failed to send reset email: {e}")
 
 
 async def send_password_changed_notification(email: str):
@@ -42,9 +39,7 @@ If you did not change your password, please contact support.
         """
 
         await smtp_client.send_email(email, subject, body)
-        print(f"DEBUG: Password change notification sent to {email}!")
     except Exception as e:
-        print(f"DEBUG: Password change notification failed: {e}")
 
 
 class UserCreateMixin:
@@ -93,19 +88,14 @@ class UserCreateMixin:
 
             # Generate verification code and ensure it's properly stored
             verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
-            print(f"DEBUG: Generated verification code for {user.email}: {verification_code}")
 
             # Store the code BEFORE sending email
             EMAIL_VERIFICATION_CODES[email] = verification_code
-            print(f"DEBUG: Stored verification code in dict: {EMAIL_VERIFICATION_CODES.get(email)}")
 
             try:
                 from api_old.email_utils import send_email
-                print(f"DEBUG: Attempting to send verification email to {user.email} with code: {verification_code}")
                 await send_email(user.email, verification_code)
-                print(f"DEBUG: Verification email sent successfully! CODE: {verification_code}")
             except Exception as e:
-                print(f"DEBUG: Verification email sending failed: {e}")
 
             response = JSONResponse(
                 content={
@@ -135,7 +125,6 @@ class UserCreateMixin:
             email = data.get('email', '').strip().lower()  # Normalize email
             submitted_code = data.get('code', '').strip()  # Strip whitespace
 
-            print(f"DEBUG: Verification attempt - Email: {email}, Code: {submitted_code}")
 
             if not email or not submitted_code:
                 raise HTTPException(status_code=400, detail="Email и код обязательны")
@@ -143,14 +132,11 @@ class UserCreateMixin:
             from api_old.auth_api import EMAIL_VERIFICATION_CODES
             expected_code = EMAIL_VERIFICATION_CODES.get(email)
 
-            print(f"DEBUG: Expected code: {expected_code}, Submitted code: {submitted_code}")
-            print(f"DEBUG: Current EMAIL_VERIFICATION_CODES dict: {EMAIL_VERIFICATION_CODES}")
 
             if not expected_code:
                 raise HTTPException(status_code=400, detail="Код верификации не найден или истек")
 
             if submitted_code != expected_code:
-                print(f"DEBUG: Code mismatch - Expected: '{expected_code}', Got: '{submitted_code}'")
                 raise HTTPException(status_code=400, detail="Неверный код верификации")
 
             user = await User.get_or_none(email=email)
@@ -159,7 +145,6 @@ class UserCreateMixin:
 
             # Remove the code only after successful verification
             EMAIL_VERIFICATION_CODES.pop(email, None)
-            print(f"DEBUG: Verification successful, removed code for {email}")
 
             jwt_token = await create_jwt_token(user.id, user.email, user.language, user.role)
 
@@ -197,9 +182,7 @@ class UserCreateMixin:
 Congratulations! Your MakeASAP account has been successfully registered.
 """
                 await smtp_client.send_email(user.email, subject, body)
-                print(f"DEBUG: Registration notification sent to {email}!")
             except Exception as e:
-                print(f"DEBUG: Failed to send registration notification: {e}")
 
             response.set_cookie(
                 key=JWT_COOKIE_NAME,
@@ -216,5 +199,4 @@ Congratulations! Your MakeASAP account has been successfully registered.
         except HTTPException:
             raise
         except Exception as e:
-            print(f"DEBUG: Verification error: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Ошибка при верификации: {str(e)}")

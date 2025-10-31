@@ -28,17 +28,15 @@ class BidService:
 
         current_user = await get_current_user(request)
 
-        # Валидация файлов
         temp_files = await _validate_uploaded_files(
             files=files,
             user_role=user_role,
             user_email=user_email,
             lang=lang,
-            form=data.dict()  # словарь с полями формы
+            form=data.dict()
         )
 
         file_paths = await _move_files_to_final_location(temp_files)
-        # Создаем данные для заявки, используя current_user как автора
         request_data = data.dict()
         request_data["author"] = current_user
         request_data["files"] = file_paths
@@ -60,7 +58,6 @@ class BidService:
         )
         request_data['main_language'] = main_language
 
-        # ДОБАВЛЯЕМ АВТОПЕРЕВОД
         translation_result = await auto_translate_bid_fields(
             title_uk=request_data.get('title_uk'),
             title_en=request_data.get('title_en'),
@@ -74,7 +71,6 @@ class BidService:
             description_de=request_data.get('description_de')
         )
 
-        # Обновляем данные переведенными значениями
         request_data.update({
             'title_uk': translation_result['title_uk'],
             'title_en': translation_result['title_en'],
@@ -89,12 +85,8 @@ class BidService:
             'auto_translated_fields': translation_result['auto_translated_fields']
         })
 
-        print(f"DEBUG DATA (AUTHENTICATED), \n {request_data}")
-
-        # Создаем заявку
         bid = await BidCRUD.create_bid(request_data)
 
-        # Генерируем слаги
         slugs = await generate_bid_slugs(
             title_uk=bid.title_uk,
             title_en=bid.title_en,
@@ -105,7 +97,6 @@ class BidService:
         )
         await BidCRUD.update_bid(bid, slugs)
 
-        # Отправляем email с подтверждением
         delete_link = f'{request.base_url}/delete-request/{bid.delete_token}'
         await send_bid_confirmation_email(current_user.email, delete_link)
 
@@ -121,19 +112,15 @@ class BidService:
         """
         Сверхбыстрое создание заявки с ленивым переводом
         """
-        # Запускаем все операции параллельно
         current_user_task = asyncio.create_task(get_current_user(request))
         files_task = asyncio.create_task(_validate_uploaded_files(
             files=files, user_role=user_role, user_email=user_email, lang=lang, form=data.dict()
         ))
         
-        # Ждем завершения критических операций
         current_user, temp_files = await asyncio.gather(current_user_task, files_task)
         
-        # Параллельно обрабатываем файлы и готовим данные
         file_paths_task = asyncio.create_task(_move_files_to_final_location(temp_files))
         
-        # Подготавливаем данные для заявки
         request_data = data.dict()
         request_data["author"] = current_user
         request_data["delete_token"] = secrets.token_urlsafe(DELETE_TOKEN_LENGTH)
@@ -154,14 +141,11 @@ class BidService:
         )
         request_data['main_language'] = main_language
 
-        # Ждем завершения обработки файлов
         file_paths = await file_paths_task
         request_data["files"] = file_paths
 
-        # Создаем заявку сразу (без переводов)
         bid = await BidCRUD.create_bid(request_data)
 
-        # Генерируем слаги для основного языка
         primary_lang = main_language
         primary_title = request_data.get(f'title_{primary_lang}', '')
         if primary_title:
@@ -169,11 +153,9 @@ class BidService:
             slug = generate_slug(primary_title, primary_lang)
             if bid.id:
                 slug = f"{slug}-{bid.id}"
-            
-            # Обновляем только основной slug
+
             await BidCRUD.update_bid(bid, {f'slug_{primary_lang}': slug})
         
-        # Запускаем перевод в фоне (не ждем)
         translation_task = asyncio.create_task(auto_translate_bid_fields(
             title_uk=request_data.get('title_uk'),
             title_en=request_data.get('title_en'),
@@ -187,11 +169,9 @@ class BidService:
             description_de=request_data.get('description_de')
         ))
         
-        # Запускаем обновление переводов в фоне
         async def update_translations():
             try:
                 translation_result = await translation_task
-                # Обновляем данные переведенными значениями
                 update_data = {
                     'title_uk': translation_result['title_uk'],
                     'title_en': translation_result['title_en'],
@@ -206,7 +186,6 @@ class BidService:
                     'auto_translated_fields': translation_result['auto_translated_fields']
                 }
                 
-                # Генерируем все слаги
                 slugs = await generate_bid_slugs(
                     title_uk=update_data['title_uk'],
                     title_en=update_data['title_en'],
@@ -216,17 +195,13 @@ class BidService:
                     bid_id=bid.id
                 )
                 
-                # Обновляем заявку с переводами и слагами
                 update_data.update(slugs)
                 await BidCRUD.update_bid(bid, update_data)
                 
             except Exception as e:
-                print(f"Background translation update failed: {e}")
         
-        # Запускаем обновление в фоне
         asyncio.create_task(update_translations())
         
-        # Отправляем email в фоне (не ждем)
         delete_link = f'{request.base_url}/delete-request/{bid.delete_token}'
         asyncio.create_task(send_bid_confirmation_email(current_user.email, delete_link))
 
@@ -262,7 +237,6 @@ class BidService:
                     if os.path.exists(full_path):
                         os.remove(full_path)
                 except Exception as e:
-                    print(f"DEBUG: Error deleting file {file_path}: {e}")
 
         await BidCRUD.delete_bid(bid)
         return JSONResponse({'success': True})

@@ -26,7 +26,6 @@ async def create_jwt_token(user_id: int, user_email: str, user_language: str, us
         'language': user_language,
         'exp': expiration_time
     }
-    print(f"DEBUG: Creating JWT token with payload: {payload}")
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 

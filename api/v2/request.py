@@ -44,7 +44,7 @@ async def get_bids_filtered_list(
             detail=f"Неподдерживаемый язык. Доступны: {', '.join(SUPPORTED_LANGUAGES)}"
         )
 
-    # Валидация диапазона цен
+    ация диапазона цен
     if min_cost is not None and max_cost is not None and max_cost < min_cost:
         raise HTTPException(
             status_code=400,

@@ -180,7 +180,6 @@ async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, 
     primary_title = result[f'title_{primary_lang}']
     primary_description = result[f'description_{primary_lang}']
     
-    # Подготавливаем список всех необходимых переводов
     texts_to_translate = []
     
     if primary_title and primary_title.strip():
@@ -211,7 +210,6 @@ async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, 
     if texts_to_translate:
         translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
         
-        # Обновляем результат
         for field_name, translated_text in translation_results.items():
             if translated_text and translated_text.strip():
                 result[field_name] = translated_text
@@ -238,7 +236,6 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
     primary_lang_name = detect_primary_language(name_uk, name_en, name_pl, name_fr, name_de)
     primary_lang_desc = detect_primary_language(description_uk, description_en, description_pl, description_fr, description_de)
     
-    # Подготавливаем список всех необходимых переводов
     texts_to_translate = []
     
     if primary_lang_name:
@@ -273,7 +270,6 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
     if texts_to_translate:
         translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
         
-        # Обновляем результат
         for field_name, translated_text in translation_results.items():
             if translated_text and translated_text.strip():
                 result[field_name] = translated_text

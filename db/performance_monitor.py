@@ -32,7 +32,6 @@ async def performance_benchmark():
             count = list(result[0].values())[0] if result else 0
             print(f"📊 {name}: {count:,} записей")
         except Exception as e:
-            print(f"❌ Ошибка подсчета {name}: {e}")
     
     analysis_time = time.time() - start_time
     print(f"⏱️  Анализ выполнен за: {analysis_time:.3f}s")
@@ -56,7 +55,6 @@ async def performance_benchmark():
             count = len(result) if result else 0
             print(f"⚡ {test_name}: {query_time:.3f}s ({count} результатов)")
         except Exception as e:
-            print(f"❌ {test_name}: Ошибка - {e}")
     
     print()
     
@@ -78,7 +76,6 @@ async def performance_benchmark():
             count = len(result) if result else 0
             print(f"⚡ {test_name}: {query_time:.3f}s ({count} результатов)")
         except Exception as e:
-            print(f"❌ {test_name}: Ошибка - {e}")
     
     print()
     
@@ -94,7 +91,6 @@ async def performance_benchmark():
         if len(indices_result) > 5:
             print(f"   ... и еще {len(indices_result) - 5}")
     except Exception as e:
-        print(f"❌ Ошибка анализа индексов: {e}")
     
     print()
     
@@ -125,7 +121,6 @@ async def performance_benchmark():
             print(f"   🗂️  {table['name']}: {table['index_count']} индексов")
             
     except Exception as e:
-        print(f"❌ Ошибка анализа размера: {e}")
     
     print()
     

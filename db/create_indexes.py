@@ -108,7 +108,6 @@ async def create_performance_indexes():
         "CREATE INDEX IF NOT EXISTS idx_cities_country_name ON cities (country_id, name_en);",
     ]
     
-    # Объединяем все индексы
     all_indexes = (
         bid_indexes + 
         company_indexes + 
@@ -130,7 +129,6 @@ async def create_performance_indexes():
             print(f"✅ Создан индекс: {index_name}")
             success_count += 1
         except Exception as e:
-            print(f"❌ Ошибка создания индекса: {index_sql[:50]}... - {e}")
             error_count += 1
     
     print(f"\n📊 Итоги:")
@@ -142,7 +140,6 @@ async def create_performance_indexes():
         print("\n🐘 Выполнение команд для PostgreSQL...")
         
         postgres_commands = [
-            # Обновляем статистику
             "ANALYZE;",
             
             # Настройки для лучшей производительности поиска

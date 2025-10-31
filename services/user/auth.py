@@ -15,14 +15,14 @@ class AuthMixin:
         email = form_data.email.strip().lower()
         password = form_data.password
 
-        # Валидация email
+        ация email
         if not email:
             raise HTTPException(status_code=400, detail="Email обязателен")
 
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
             raise HTTPException(status_code=400, detail="Неверный формат email")
 
-        # Валидация пароля
+        ация пароля
         if not password:
             raise HTTPException(status_code=400, detail="Пароль обязателен")
 
@@ -36,7 +36,7 @@ class AuthMixin:
         if not user:
             raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
-        # Проверка пароля
+        ка пароля
         if not verify_password(password, user.password):
             raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
@@ -44,7 +44,6 @@ class AuthMixin:
 
     @staticmethod
     async def _create_authenticated_response(user):
-        print(f"DEBUG: Creating authenticated response for user {user.email}")
 
         jwt_token = await create_jwt_token(
             user.id, user.email, user.language, int(user.role)

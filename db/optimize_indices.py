@@ -74,7 +74,6 @@ async def create_performance_indices():
             await connection.execute_query(query)
             print(f"✅ [{i}/{len(all_indices)}] Индекс создан: {query.split()[5] if len(query.split()) > 5 else 'unknown'}")
         except Exception as e:
-            print(f"❌ Ошибка создания индекса: {e}")
     
     print(f"🎯 Создание индексов завершено: {len(all_indices)} индексов")
     
@@ -93,7 +92,6 @@ async def create_performance_indices():
             await connection.execute_query(optimization)
             print(f"✅ {optimization}")
         except Exception as e:
-            print(f"❌ Ошибка оптимизации: {e}")
     
     await Tortoise.close_connections()
     print("\n🎉 Оптимизация базы данных завершена!")

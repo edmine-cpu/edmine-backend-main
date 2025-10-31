@@ -103,7 +103,7 @@ async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, 
     primary_title = result[f'title_{primary_lang}']
     primary_description = result[f'description_{primary_lang}']
     
-    # Переводим заголовок на недостающие языки
+    м заголовок на недостающие языки
     if primary_title and primary_title.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_lang:
@@ -114,7 +114,7 @@ async def auto_translate_bid_fields(title_uk: str = None, title_en: str = None, 
                         result[field_name] = translated
                         result['auto_translated_fields'].append(field_name)
     
-    # Переводим описание на недостающие языки
+    м описание на недостающие языки
     if primary_description and primary_description.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_lang:
@@ -152,7 +152,7 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
     # Определяем основной язык для описания компании
     primary_lang_desc = detect_primary_language(description_uk, description_en, description_pl, description_fr, description_de)
     
-    # Переводим название компании на недостающие языки
+    м название компании на недостающие языки
     if primary_lang_name:
         primary_name = result[f'company_name_{primary_lang_name}']
         if primary_name and primary_name.strip():
@@ -165,7 +165,7 @@ async def auto_translate_company_fields(name_uk: str = None, name_en: str = None
                             result[field_name] = translated
                             result['auto_translated_fields'].append(field_name)
     
-    # Переводим описание компании на недостающие языки
+    м описание компании на недостающие языки
     if primary_lang_desc:
         primary_desc = result[f'company_description_{primary_lang_desc}']
         if primary_desc and primary_desc.strip():

@@ -90,7 +90,6 @@ async def read_current_user(request: Request):
     try:
         await current_user.fetch_related("categories", "subcategories", "country")
     except Exception as e:
-        print(f"DEBUG: fetch_related error: {e}")
         pass
     
     return {

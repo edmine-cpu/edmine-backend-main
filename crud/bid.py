@@ -9,7 +9,6 @@ class BidCRUD:
         """
         Создаёт заявку, автоматически преобразуя данные для ForeignKey и IntFields
         """
-        # Обработка ForeignKey полей
         if 'country' in data:
             data['country_id'] = data.pop('country')
 
@@ -20,7 +19,6 @@ class BidCRUD:
             else:
                 data['city_id'] = city_value
 
-        # Преобразуем категории и подкатегории в списки для JSONField
         if 'category' in data:
             value = data.pop('category')
             if isinstance(value, str):
@@ -46,7 +44,6 @@ class BidCRUD:
 
     @staticmethod
     async def update_bid(bid: Bid, data: dict) -> Bid:
-        # Обновляем все поля
         for key, value in data.items():
             setattr(bid, key, value)
         await bid.save()

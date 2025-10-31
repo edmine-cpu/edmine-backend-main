@@ -140,7 +140,6 @@ async def admin_blog_create(
         try:
             translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=5)
             
-            # Обновляем результат
             for field_key, translated_text in translation_results.items():
                 if translated_text and translated_text.strip():
                     # Парсим ключ для получения field_name и target_lang

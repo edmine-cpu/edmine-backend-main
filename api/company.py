@@ -41,14 +41,10 @@ async def get_company_by_id(company_id: int):
 
 @router.get('/companies/slug/{slug_with_id}')
 async def get_company_by_slug(slug_with_id: str):
-    """
-    Получить компанию по слагу в формате slug-id
-    """
-    # Парсим slug-id
+    """Get company by slug in format: slug-id"""
     if '-' not in slug_with_id:
         raise HTTPException(status_code=400, detail="Invalid slug format. Expected: slug-id")
-    
-    # Извлекаем ID из конца строки
+
     parts = slug_with_id.rsplit('-', 1)
     if len(parts) != 2:
         raise HTTPException(status_code=400, detail="Invalid slug format. Expected: slug-id")
@@ -83,9 +79,7 @@ async def create_company(request: Request, company: CompanyCreateSchema):
 
 @router.post('/companies-fast')
 async def create_company_fast(request: Request, company: CompanyCreateSchema):
-    """
-    Сверхбыстрое создание компании с ленивым переводом в фоне
-    """
+    """Fast company creation with lazy background translation"""
     result = await CompanyService.create_company_fast(request, company)
     return result
 

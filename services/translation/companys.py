@@ -51,7 +51,6 @@ async def auto_translate_company_fields(
         'auto_translated_fields': []
     }
 
-    # Подготавливаем список всех необходимых переводов
     from .utils import translate_text_batch_with_semaphore
     texts_to_translate = []
     
@@ -59,7 +58,7 @@ async def auto_translate_company_fields(
     primary_name_lang = 'uk'
     primary_name = result['name_uk']
     
-    # Переводим название компании
+    м название компании
     if primary_name and primary_name.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_name_lang:
@@ -78,7 +77,7 @@ async def auto_translate_company_fields(
     )
     primary_desc = result[f'description_{primary_desc_lang}']
 
-    # Переводим описание компании
+    м описание компании
     if primary_desc and primary_desc.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_desc_lang:
@@ -95,7 +94,6 @@ async def auto_translate_company_fields(
     if texts_to_translate:
         translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
         
-        # Обновляем результат
         for field_name, translated_text in translation_results.items():
             if translated_text and translated_text.strip():
                 result[field_name] = translated_text

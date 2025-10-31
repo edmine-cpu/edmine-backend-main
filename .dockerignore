@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.log
+.git/
+.gitignore
+.vscode/
+.idea/
+*.md
+!DOCKER_SETUP.md
+.env
+.env.example

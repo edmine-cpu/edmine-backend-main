@@ -12,12 +12,10 @@ from collections import defaultdict
 
 class AntifraudSystem:
     def __init__(self):
-        # Хранилище активности пользователей
         self.user_activity: Dict[int, List[Dict]] = defaultdict(list)
         self.ip_activity: Dict[str, List[Dict]] = defaultdict(list)
         self.suspicious_patterns: Dict[str, int] = defaultdict(int)
         
-        # Настройки лимитов
         self.LIMITS = {
             'max_requests_per_minute': 60,
             'max_requests_per_hour': 300,
@@ -77,7 +75,7 @@ class AntifraudSystem:
         minute_ago = self._get_time_window(1)
         hour_ago = self._get_time_window(60)
         
-        # Проверка по IP
+        ка по IP
         ip_records = [
             r for r in self.ip_activity.get(ip, [])
             if datetime.fromisoformat(r['timestamp']) > minute_ago
@@ -90,7 +88,7 @@ class AntifraudSystem:
             result['risk_score'] += 50
             return result
         
-        # Проверка по пользователю (если авторизован)
+        ка по пользователю (если авторизован)
         if user_id:
             user_records = [
                 r for r in self.user_activity.get(user_id, [])
@@ -104,7 +102,6 @@ class AntifraudSystem:
                 result['risk_score'] += 30
                 return result
             
-            # Специфические проверки по действиям
             action_specific_checks = await self._check_action_specific_limits(
                 user_id, action, user_records, minute_ago, hour_ago
             )
@@ -161,7 +158,7 @@ class AntifraudSystem:
         risk_score = 0
         patterns = []
         
-        # Проверка на ботов (очень быстрые запросы)
+        ка на ботов (очень быстрые запросы)
         if user_id:
             recent_activities = [
                 r for r in self.user_activity.get(user_id, [])
@@ -172,7 +169,7 @@ class AntifraudSystem:
                 risk_score += 30
                 patterns.append('rapid_requests')
         
-        # Проверка повторяющихся данных
+        ка повторяющихся данных
         if 'email' in request_data:
             email_hash = hashlib.md5(request_data['email'].encode()).hexdigest()
             recent_email_usage = self.suspicious_patterns.get(f'email_{email_hash}', 0)
@@ -181,14 +178,14 @@ class AntifraudSystem:
                 patterns.append('email_reuse')
             self.suspicious_patterns[f'email_{email_hash}'] += 1
         
-        # Проверка User-Agent (если есть)
+        ка User-Agent (если есть)
         if 'user_agent' in request_data:
             ua = request_data['user_agent']
             if 'bot' in ua.lower() or 'crawler' in ua.lower():
                 risk_score += 80
                 patterns.append('bot_user_agent')
         
-        # Проверка на множественные аккаунты с одного IP
+        ка на множественные аккаунты с одного IP
         unique_users_from_ip = len(set(
             r.get('details', {}).get('user_id') for r in self.ip_activity.get(ip, [])
             if r.get('details', {}).get('user_id')
@@ -216,7 +213,7 @@ class AntifraudSystem:
             if len(recent_fails) >= 3:
                 return True
         
-        # Проверка по IP
+        ка по IP
         ip_records = self.ip_activity.get(ip, [])
         recent_ip_fails = [
             r for r in ip_records
@@ -230,7 +227,7 @@ class AntifraudSystem:
         """Определить, нужно ли заблокировать пользователя"""
         user_records = self.user_activity.get(user_id, [])
         
-        # Проверка на массовый спам
+        ка на массовый спам
         recent_violations = [
             r for r in user_records
             if (r['action'] in ['spam_detected', 'policy_violation'] and 
@@ -244,7 +241,7 @@ class AntifraudSystem:
                 'duration': 86400  # 24 часа
             }
         
-        # Проверка на фрод
+        ка на фрод
         fraud_indicators = [
             r for r in user_records
             if (r['action'] in ['payment_fraud', 'fake_reviews'] and 
@@ -277,5 +274,4 @@ class AntifraudSystem:
         }
 
 
-# Глобальный экземпляр антифрод системы
 antifraud = AntifraudSystem()

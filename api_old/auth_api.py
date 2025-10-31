@@ -99,7 +99,6 @@ async def verify_email_code(request: Request):
 
         EMAIL_VERIFICATION_CODES.pop(email, None)
 
-        # Отправляем уведомление о создании аккаунта
         try:
             print(f"DEBUG: Attempting to send account creation notification to {user.email}")
             from api_old.email_utils import send_account_created_notification

@@ -11,12 +11,10 @@ from routers.secur import get_current_user
 async def antifraud_middleware(request: Request, call_next):
     """Middleware для проверки антифрод системы"""
     
-    # Получаем IP адрес
     client_ip = request.client.host
     if 'x-forwarded-for' in request.headers:
         client_ip = request.headers['x-forwarded-for'].split(',')[0].strip()
     
-    # Получаем пользователя (если авторизован)
     user = None
     user_id = None
     try:
@@ -25,10 +23,8 @@ async def antifraud_middleware(request: Request, call_next):
     except:
         pass  # Не авторизован или ошибка авторизации
     
-    # Определяем действие на основе URL и метода
     action = _get_action_from_request(request)
     
-    # Проверяем лимиты скорости
     rate_check = await antifraud.check_rate_limits(user_id, client_ip, action)
     
     if not rate_check['allowed']:
@@ -42,15 +38,12 @@ async def antifraud_middleware(request: Request, call_next):
             headers={'Retry-After': str(rate_check['retry_after'])}
         )
     
-    # Подготавливаем данные запроса для анализа
     request_data = await _prepare_request_data(request)
     
-    # Проверяем подозрительные паттерны
     pattern_check = await antifraud.detect_suspicious_patterns(
         user_id, client_ip, request_data
     )
     
-    # Логируем активность
     await antifraud.log_activity(
         user_id, client_ip, action, 
         {
@@ -60,10 +53,8 @@ async def antifraud_middleware(request: Request, call_next):
         }
     )
     
-    # Если обнаружены подозрительные паттерны
     if pattern_check['is_suspicious']:
         if action in ['login', 'register']:
-            # Требуем капчу для подозрительных попыток входа/регистрации
             return JSONResponse(
                 status_code=403,
                 content={
@@ -83,7 +74,6 @@ async def antifraud_middleware(request: Request, call_next):
                 }
             )
     
-    # Проверяем, нужно ли заблокировать пользователя
     if user_id:
         block_check = await antifraud.should_block_user(user_id)
         if block_check['should_block']:
@@ -96,10 +86,8 @@ async def antifraud_middleware(request: Request, call_next):
                 }
             )
     
-    # Продолжаем выполнение запроса
     response = await call_next(request)
     
-    # Логируем результат
     if response.status_code >= 400:
         await antifraud.log_activity(
             user_id, client_ip, f"{action}_failed",
@@ -144,16 +132,13 @@ async def _prepare_request_data(request: Request) -> dict:
         'content_type': request.headers.get('content-type', ''),
     }
     
-    # Пытаемся получить данные тела запроса (для POST/PUT)
     if request.method in ['POST', 'PUT', 'PATCH']:
         try:
-            # Создаем копию тела запроса
             body = await request.body()
             if body:
                 if 'application/json' in data['content_type']:
                     try:
                         json_data = json.loads(body.decode())
-                        # Извлекаем только безопасные поля
                         safe_fields = ['email', 'username', 'name', 'city', 'country']
                         for field in safe_fields:
                             if field in json_data:

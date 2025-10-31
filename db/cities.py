@@ -1,4 +1,4 @@
-# Словарь с переводами городов для разных языков
+
 CITY_TRANSLATIONS = {
     'Київ': {'en': 'Kyiv', 'pl': 'Kijów', 'fr': 'Kiev', 'de': 'Kiew'},
     'Харків': {'en': 'Kharkiv', 'pl': 'Charków', 'fr': 'Kharkiv', 'de': 'Charkiw'},
@@ -33,7 +33,7 @@ def get_city_name(city_uk: str, lang: str = 'uk') -> str:
         return city_uk
     if city_uk in CITY_TRANSLATIONS and lang in CITY_TRANSLATIONS[city_uk]:
         return CITY_TRANSLATIONS[city_uk][lang]
-    return city_uk  # Возвращаем украинское название если перевод не найден
+    return city_uk  
 
 CITIES = [
     'Київ',

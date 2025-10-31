@@ -37,14 +37,13 @@ async def edit_performer_save(
     try:
         user = await User.get(id=user_id)
         
-        # Проверяем права: админ или редактирование своего профиля
         if user_role != 1 and user.email != user_email:
             return templates.TemplateResponse('error.html', {
                 'request': request,
                 'error': 'Недостатньо прав'
             })
 
-        # Валидация данных
+        ация данных
         if not name.strip() or not city.strip():
             return templates.TemplateResponse('edit_performer.html', {
                 'request': request,
@@ -52,7 +51,6 @@ async def edit_performer_save(
                 'error': 'Всі поля обов\'язкові'
             })
 
-        # Обновляем данные
         user.name = name.strip()
         user.city = city.strip()
         user.language = language.strip()
@@ -71,7 +69,6 @@ async def delete_performer_new(request: Request, lang: str, user_id: int):
     """Удаление исполнителя (только для админов)"""
     user_role = getattr(request.state, 'user_role', None)
     
-    # Проверяем права администратора
     if user_role != 1:
         return JSONResponse({'error': 'Недостатньо прав'}, status_code=403)
     
@@ -82,17 +79,14 @@ async def delete_performer_new(request: Request, lang: str, user_id: int):
     except DoesNotExist:
         return JSONResponse({'error': 'Користувача не знайдено'}, status_code=404)
     except Exception as e:
-        print(f"DEBUG: Error deleting user {user_id}: {e}")
         return JSONResponse({'error': f'Помилка: {str(e)}'}, status_code=500)
 
 
-# Роуты для удаления
 @router.post('/{lang}/bid/{bid_id}/delete')
 async def delete_bid(request: Request, lang: str, bid_id: int):
     """Удаление заявки (только для админов)"""
     user_role = getattr(request.state, 'user_role', None)
     
-    # Проверяем права администратора
     if user_role != 1:
         return JSONResponse({'error': 'Недостатньо прав'}, status_code=403)
     
@@ -103,5 +97,4 @@ async def delete_bid(request: Request, lang: str, bid_id: int):
     except DoesNotExist:
         return JSONResponse({'error': 'Заявку не знайдено'}, status_code=404)
     except Exception as e:
-        print(f"DEBUG: Error deleting bid {bid_id}: {e}")
         return JSONResponse({'error': f'Помилка: {str(e)}'}, status_code=500) 

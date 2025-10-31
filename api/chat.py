@@ -16,18 +16,16 @@ from datetime import datetime
 router = APIRouter()
 
 async def detect_message_language(text: str) -> str:
-    """Автоматически определяет язык сообщения"""
+    """Auto-detect message language"""
     if not text or not text.strip():
-        return 'uk'  # По умолчанию украинский
+        return 'uk'
     
     try:
         from deep_translator.constants import GOOGLE_LANGUAGES_TO_CODES
         
-        # Берем первые 100 символов для анализа
+        
         sample_text = text[:100]
         
-        # Пробуем переводить на разные языки и смотрим результат
-        # Если текст не переводится (остается тем же), значит он уже на целевом языке
         
         test_translations = {}
         for lang in SUPPORTED_LANGUAGES:
@@ -35,18 +33,14 @@ async def detect_message_language(text: str) -> str:
                 translator = GoogleTranslator(source='auto', target=lang)
                 translated = translator.translate(sample_text)
                 
-                # Если перевод сильно отличается от оригинала, значит это другой язык
                 if translated and len(translated.strip()) > 0:
-                    # Простая эвристика: если переведенный текст сильно отличается, это другой язык
                     similarity = len(set(sample_text.lower().split()) & set(translated.lower().split()))
                     test_translations[lang] = similarity
             except:
                 continue
         
-        # Если не удалось определить автоматически, используем простую эвристику по словам
         text_lower = text.lower()
         
-        # Простые ключевые слова для определения языка
         if any(word in text_lower for word in ['hello', 'hi', 'good', 'how', 'what', 'the', 'and', 'you', 'are', 'that', 'sounds', 'great', 'plans', 'weekend']):
             return 'en'
         elif any(word in text_lower for word in ['привіт', 'привет', 'як', 'як справи', 'добре', 'дякую', 'спасибо', 'що', 'де', 'коли', 'все', 'плануємо', 'поїхати', 'дачу']):
@@ -57,20 +51,17 @@ async def detect_message_language(text: str) -> str:
             return 'fr'
         elif any(word in text_lower for word in ['guten', 'tag', 'wie', 'geht', 'ihnen', 'danke', 'auf wiedersehen', 'hallo']):
             return 'de'
-        
-        # Дополнительная проверка по отдельным словам
+
         if 'привет' in text_lower:
-            return 'uk'  # Считаем русский как украинский для перевода
+            return 'uk'
         elif 'hello' in text_lower:
             return 'en'
-        
-        return 'uk'  # По умолчанию украинский
-        
-    except Exception as e:
-        print(f"Ошибка определения языка: {e}")
-        return 'uk'  # По умолчанию украинский при ошибке
 
-# Создаем директорию для файлов если её нет
+        return 'uk'
+
+    except Exception as e:
+        return 'uk'
+
 os.makedirs("static/chat_files", exist_ok=True)
 
 @router.get('/chats')
@@ -97,7 +88,6 @@ async def get_user_chats(current_user: User = Depends(get_current_user_dependenc
                 is_read=False
             ).count()
             
-            # Используем имя из регистрации или nickname
             display_name = partner.name if partner.name and partner.name != 'temp' else (partner.nickname or partner.email.split('@')[0])
             
             result.append({
@@ -134,25 +124,21 @@ async def create_or_get_chat(
         if current_user.id == partner_id:
             raise HTTPException(status_code=400, detail="Нельзя создать чат с самим собой")
 
-        # Проверяем существование партнера
         partner = await User.get_or_none(id=partner_id)
         if not partner:
             raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-        # Ищем существующий чат
         chat = await Chat.filter(
             user1_id=min(current_user.id, partner_id), 
             user2_id=max(current_user.id, partner_id)
         ).first()
         
         if chat is None:
-            # Создаем новый чат
             chat = await Chat.create(
                 user1_id=min(current_user.id, partner_id), 
                 user2_id=max(current_user.id, partner_id)
             )
         
-        # Используем имя из регистрации или nickname
         display_name = partner.name if partner.name and partner.name != 'temp' else (partner.nickname or partner.email.split('@')[0])
         
         return {
@@ -186,12 +172,10 @@ async def list_messages(
         if current_user.id not in [chat.user1_id, chat.user2_id]:
             raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
 
-        # Пагинация
         offset = (page - 1) * limit
         
         messages = await Message.filter(chat_id=chat_id).prefetch_related("sender").order_by('-created_at').offset(offset).limit(limit)
         
-        # Помечаем сообщения как прочитанные
         await Message.filter(
             chat_id=chat_id,
             is_read=False
@@ -210,7 +194,6 @@ async def list_messages(
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
             }
             
-            # Если запрошен перевод и есть контент для перевода
             if translate_to and translate_to in SUPPORTED_LANGUAGES and msg.content:
                 try:
                     detected_language = await detect_message_language(msg.content)
@@ -226,7 +209,6 @@ async def list_messages(
                     else:
                         msg_data["is_translated"] = False
                 except Exception as e:
-                    print(f"Ошибка перевода сообщения {msg.id}: {e}")
                     msg_data["is_translated"] = False
             else:
                 msg_data["is_translated"] = False
@@ -256,7 +238,6 @@ async def send_message(
 ):
     """Send message to chat"""
     try:
-        # Проверяем доступ к чату
         chat = await Chat.get_or_none(id=chat_id)
         if chat is None:
             raise HTTPException(status_code=404, detail="Чат не найден")
@@ -264,7 +245,7 @@ async def send_message(
         if current_user.id not in [chat.user1_id, chat.user2_id]:
             raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
 
-        # Валидация
+        ация
         if not content and not file:
             raise HTTPException(status_code=400, detail="Сообщение или файл обязательны")
 
@@ -275,18 +256,14 @@ async def send_message(
         file_name = None
         file_size = None
 
-        # Обработка файла
         if file:
-            # Проверяем размер файла (максимум 10MB)
             if file.size and file.size > 10 * 1024 * 1024:
                 raise HTTPException(status_code=400, detail="Файл слишком большой (максимум 10MB)")
 
-            # Проверяем тип файла
             allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
             if file.content_type not in allowed_types:
                 raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла")
 
-            # Сохраняем файл
             file_extension = os.path.splitext(file.filename)[1] if file.filename else '.txt'
             file_name = f"{uuid.uuid4()}{file_extension}"
             file_path = f"static/chat_files/{file_name}"
@@ -296,7 +273,6 @@ async def send_message(
                 buffer.write(content_data)
                 file_size = len(content_data)
 
-        # Создаем сообщение
         message = await Message.create(
             chat_id=chat_id,
             sender=current_user,
@@ -337,7 +313,6 @@ async def delete_message(
         if message.sender.id != current_user.id:
             raise HTTPException(status_code=403, detail="Можно удалять только свои сообщения")
 
-        # Удаляем файл если есть
         if message.file_path and os.path.exists(message.file_path):
             os.remove(message.file_path)
 
@@ -383,9 +358,8 @@ async def translate_chat_messages(
     target_language: str = Form(...),
     current_user: User = Depends(get_current_user_dependency)
 ):
-    """Переводит сообщения собеседника в чате на указанный язык"""
+    """Translate chat messages to specified language"""
     try:
-        # Проверяем доступ к чату
         chat = await Chat.get_or_none(id=chat_id)
         if chat is None:
             raise HTTPException(status_code=404, detail="Чат не найден")
@@ -393,7 +367,6 @@ async def translate_chat_messages(
         if current_user.id not in [chat.user1_id, chat.user2_id]:
             raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
 
-        # Проверяем поддержку целевого языка
         if target_language not in SUPPORTED_LANGUAGES:
             raise HTTPException(
                 status_code=400, 
@@ -428,7 +401,7 @@ async def translate_chat_messages(
             detected_language = await detect_message_language(message.content)
             print(f"Message '{message.content}' detected as language: {detected_language}")
             
-            # Переводим только если язык отличается от целевого
+            м только если язык отличается от целевого
             translated_content = message.content
             translation_available = True
             

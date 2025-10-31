@@ -7,20 +7,15 @@ from tortoise.expressions import Q
 class CompanyCRUD:
     @staticmethod
     async def get_all_companies(limit, offset, category=None, subcategory=None, country=None, city=None, search=None, sort="relevance"):
-        # Оптимизированный запрос с select_related для владельца и prefetch для ManyToMany
         query = Company.all().select_related('owner').prefetch_related('categories', 'subcategories')
         
-        # Применяем фильтры в порядке селективности
         
-        # Страна (наиболее селективный)
         if country:
             query = query.filter(country__icontains=country)
             
-        # Город
         if city:
             query = query.filter(city__icontains=city)
         
-        # Категории
         if category:
             try:
                 category_id = int(category)
@@ -28,7 +23,6 @@ class CompanyCRUD:
             except (ValueError, TypeError):
                 pass
         
-        # Подкатегории
         if subcategory:
             try:
                 subcategory_id = int(subcategory)
@@ -36,10 +30,8 @@ class CompanyCRUD:
             except (ValueError, TypeError):
                 pass
             
-        # Поиск по тексту (наиболее затратный - применяем последним)
         if search:
             search_lower = search.lower()
-            # Оптимизируем поиск - сначала по имени, потом по описанию
             query = query.filter(
                 Q(name__icontains=search_lower) |
                 Q(description_uk__icontains=search_lower) |
@@ -62,7 +54,6 @@ class CompanyCRUD:
         elif sort == "title_desc":
             query = query.order_by("-name")
         
-        # Ограничиваем лимит для защиты
         safe_limit = min(limit, 100) if limit else 20
         
         companies = await query.limit(safe_limit).offset(offset).distinct()
@@ -97,7 +88,6 @@ class CompanyCRUD:
         if not company:
             raise HTTPException(status_code=404, detail="Company not found")
         
-        # Проверяем, что слаг соответствует одному из слагов компании
         valid_slugs = []
         if company.slug_uk and company.slug_uk.startswith(slug_part):
             valid_slugs.append(company.slug_uk)
@@ -127,7 +117,6 @@ class CompanyCRUD:
         import asyncio
         from models import Category, UnderCategory
         
-        # Получаем страну и город
         country = None
         city = None
         
@@ -145,10 +134,8 @@ class CompanyCRUD:
         category_ids = data.pop('category', []) or []
         under_category_ids = data.pop('under_category', []) or []
 
-        # Создаем компанию
         created_company = await Company.create(**data)
         
-        # Добавляем категории
         if category_ids:
             categories = await Category.filter(id__in=category_ids).all()
             await created_company.categories.add(*categories)

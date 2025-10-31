@@ -1,6 +1,4 @@
-"""
-Admin Panel для всех моделей используя SQLAdmin
-"""
+"""Admin Panel using SQLAdmin"""
 from sqladmin import Admin, ModelView
 from sqladmin.authentication import AuthenticationBackend
 from starlette.requests import Request
@@ -16,26 +14,23 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Подключение к базе данных через SQLAlchemy
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DATABASE_URL = f"postgresql+asyncpg://postgres:{DB_PASSWORD}@0.0.0.0:5432/makeasap_dev"
 
-# Создаем движок SQLAlchemy для админки
 engine = create_async_engine(DATABASE_URL, echo=False)
 
 Base = declarative_base()
 
-# Вспомогательные функции для перевода и генерации slug
 SUPPORTED_LANGUAGES = ['uk', 'en', 'pl', 'fr', 'de']
 
 def generate_slug(text: str, lang: str = 'en') -> str:
-    """Генерирует slug из текста"""
+    """Generate slug from text"""
     if not text or not text.strip():
         return ""
     return slugify(text, max_length=128)
 
 async def translate_field(text: str, source_lang: str, target_lang: str) -> str:
-    """Переводит текст с одного языка на другой"""
+    """Translate text from one language to another"""
     if not text or not text.strip() or source_lang == target_lang:
         return text
 
@@ -48,16 +43,15 @@ async def translate_field(text: str, source_lang: str, target_lang: str) -> str:
         return text
 
 def detect_primary_language(data: dict, field_prefix: str = 'name') -> str:
-    """Определяет основной язык по заполненным полям"""
+    """Detect primary language from filled fields"""
     for lang in SUPPORTED_LANGUAGES:
         field_name = f"{field_prefix}_{lang}"
         if field_name in data and data[field_name] and str(data[field_name]).strip():
             return lang
-    return 'uk'  # По умолчанию украинский
+    return 'uk'
 
 async def auto_translate_and_slug(data: dict, field_prefix: str = 'name', generate_slugs: bool = True):
-    """Автоматически переводит поля и генерирует slug"""
-    # Определяем основной язык
+    """Auto-translate fields and generate slugs"""
     primary_lang = detect_primary_language(data, field_prefix)
     primary_field = f"{field_prefix}_{primary_lang}"
     primary_text = data.get(primary_field, "")
@@ -67,23 +61,19 @@ async def auto_translate_and_slug(data: dict, field_prefix: str = 'name', genera
 
     primary_text = str(primary_text).strip()
 
-    # Переводим на все остальные языки
     tasks = []
     for lang in SUPPORTED_LANGUAGES:
         if lang != primary_lang:
             target_field = f"{field_prefix}_{lang}"
-            # Переводим только если поле пустое
             if not data.get(target_field) or not str(data.get(target_field)).strip():
                 task = translate_field(primary_text, primary_lang, lang)
                 tasks.append((target_field, task))
 
-    # Выполняем все переводы параллельно
     if tasks:
         translations = await asyncio.gather(*[task for _, task in tasks])
         for (field_name, _), translated_text in zip(tasks, translations):
             data[field_name] = translated_text
 
-    # Генерируем slug для всех языков
     if generate_slugs:
         for lang in SUPPORTED_LANGUAGES:
             name_field = f"{field_prefix}_{lang}"
@@ -98,32 +88,27 @@ async def auto_translate_and_slug(data: dict, field_prefix: str = 'name', genera
 
 
 class AdminAuth(AuthenticationBackend):
-    """Простая аутентификация для админки"""
+    """Simple authentication for admin panel"""
 
     async def login(self, request: Request) -> bool:
         form = await request.form()
         username = form.get("username")
         password = form.get("password")
 
-        # Проверка логина и пароля
         if username == "test" and password == "test":
-            # Устанавливаем флаг аутентификации в сессии
             request.session["admin_logged_in"] = True
             return True
         return False
 
     async def logout(self, request: Request) -> bool:
-        # Очищаем сессию при выходе
         request.session.clear()
         return True
 
     async def authenticate(self, request: Request) -> bool:
-        # Проверяем, есть ли флаг аутентификации в сессии
         admin_logged_in = request.session.get("admin_logged_in", False)
         return admin_logged_in
 
 
-# SQLAlchemy модели, отражающие структуру таблиц Tortoise ORM
 class User(Base):
     __tablename__ = "users"
 
@@ -324,7 +309,7 @@ class BlogArticle(Base):
     keywords_pl = Column(String(500), nullable=True)
     keywords_fr = Column(String(500), nullable=True)
     keywords_de = Column(String(500), nullable=True)
-    author_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # Автор статьи (необязательно)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     is_published = Column(Boolean, default=False)
     auto_translated_fields = Column(JSON, nullable=True)
     featured_image = Column(String(500), nullable=True)
@@ -344,9 +329,7 @@ class PasswordResetToken(Base):
     is_used = Column(Boolean, default=False)
 
 
-# ModelView для каждой таблицы
 class UserAdmin(ModelView, model=User):
-    """Администрирование пользователей"""
     name = "User"
     name_plural = "Users"
     icon = "fa-solid fa-user"
@@ -357,7 +340,7 @@ class UserAdmin(ModelView, model=User):
     ]
     column_searchable_list = [User.name, User.email, User.nickname]
     column_sortable_list = [User.id, User.name, User.email, User.created_at]
-    column_default_sort = [(User.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(User.id, False)]
 
     form_columns = [
         User.name, User.email, User.city, User.password, User.role,
@@ -373,7 +356,6 @@ class UserAdmin(ModelView, model=User):
 
 
 class CompanyAdmin(ModelView, model=Company):
-    """Администрирование компаний"""
     name = "Company"
     name_plural = "Companies"
     icon = "fa-solid fa-building"
@@ -381,7 +363,7 @@ class CompanyAdmin(ModelView, model=Company):
     column_list = [Company.id, Company.name, Company.slug_name, Company.city, Company.country, Company.created_at]
     column_searchable_list = [Company.name, Company.name_uk, Company.name_en]
     column_sortable_list = [Company.id, Company.name, Company.created_at]
-    column_default_sort = [(Company.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(Company.id, False)]
 
     form_columns = [
         Company.name, Company.name_uk, Company.name_en, Company.name_pl, Company.name_fr, Company.name_de,
@@ -397,15 +379,11 @@ class CompanyAdmin(ModelView, model=Company):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
-        # Переводим name полям
         await auto_translate_and_slug(data, field_prefix='name', generate_slugs=True)
-        # Переводим description поля (без slug)
         await auto_translate_and_slug(data, field_prefix='description', generate_slugs=False)
 
 
 class CountryAdmin(ModelView, model=Country):
-    """Администрирование стран"""
     name = "Country"
     name_plural = "Countries"
     icon = "fa-solid fa-globe"
@@ -413,7 +391,7 @@ class CountryAdmin(ModelView, model=Country):
     column_list = [Country.id, Country.name_uk, Country.name_en, Country.name_pl, Country.created_at]
     column_searchable_list = [Country.name_uk, Country.name_en, Country.name_pl]
     column_sortable_list = [Country.id, Country.name_en, Country.created_at]
-    column_default_sort = [(Country.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(Country.id, False)]
 
     form_columns = [
         Country.name_uk, Country.name_en, Country.name_pl, Country.name_fr, Country.name_de,
@@ -427,12 +405,10 @@ class CountryAdmin(ModelView, model=Country):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
         await auto_translate_and_slug(data, field_prefix='name', generate_slugs=True)
 
 
 class CityAdmin(ModelView, model=City):
-    """Администрирование городов"""
     name = "City"
     name_plural = "Cities"
     icon = "fa-solid fa-city"
@@ -440,7 +416,7 @@ class CityAdmin(ModelView, model=City):
     column_list = [City.id, City.name_uk, City.name_en, City.name_pl, City.created_at]
     column_searchable_list = [City.name_uk, City.name_en, City.name_pl]
     column_sortable_list = [City.id, City.name_en, City.created_at]
-    column_default_sort = [(City.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(City.id, False)]
 
     form_columns = [
         City.name_uk, City.name_en, City.name_pl, City.name_fr, City.name_de,
@@ -454,12 +430,10 @@ class CityAdmin(ModelView, model=City):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
         await auto_translate_and_slug(data, field_prefix='name', generate_slugs=True)
 
 
 class CategoryAdmin(ModelView, model=Category):
-    """Администрирование категорий"""
     name = "Category"
     name_plural = "Categories"
     icon = "fa-solid fa-tags"
@@ -467,7 +441,7 @@ class CategoryAdmin(ModelView, model=Category):
     column_list = [Category.id, Category.name, Category.name_uk, Category.name_en, Category.created_at]
     column_searchable_list = [Category.name, Category.name_uk, Category.name_en]
     column_sortable_list = [Category.id, Category.name, Category.created_at]
-    column_default_sort = [(Category.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(Category.id, False)]
 
     form_columns = [
         Category.name, Category.name_uk, Category.name_en, Category.name_pl, Category.name_fr, Category.name_de,
@@ -481,12 +455,10 @@ class CategoryAdmin(ModelView, model=Category):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
         await auto_translate_and_slug(data, field_prefix='name', generate_slugs=True)
 
 
 class UnderCategoryAdmin(ModelView, model=UnderCategory):
-    """Администрирование подкатегорий"""
     name = "UnderCategory"
     name_plural = "UnderCategories"
     icon = "fa-solid fa-tag"
@@ -494,7 +466,7 @@ class UnderCategoryAdmin(ModelView, model=UnderCategory):
     column_list = [UnderCategory.id, UnderCategory.name_uk, UnderCategory.name_en, UnderCategory.created_at]
     column_searchable_list = [UnderCategory.name_uk, UnderCategory.name_en]
     column_sortable_list = [UnderCategory.id, UnderCategory.name_uk, UnderCategory.created_at]
-    column_default_sort = [(UnderCategory.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(UnderCategory.id, False)]
 
     form_columns = [
         UnderCategory.name_uk, UnderCategory.name_en, UnderCategory.name_pl, UnderCategory.name_fr, UnderCategory.name_de,
@@ -508,12 +480,10 @@ class UnderCategoryAdmin(ModelView, model=UnderCategory):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
         await auto_translate_and_slug(data, field_prefix='name', generate_slugs=True)
 
 
 class BidAdmin(ModelView, model=Bid):
-    """Администрирование заявок"""
     name = "Bid"
     name_plural = "Bids"
     icon = "fa-solid fa-file-contract"
@@ -524,7 +494,7 @@ class BidAdmin(ModelView, model=Bid):
     ]
     column_searchable_list = [Bid.title_uk, Bid.title_en, Bid.title_pl]
     column_sortable_list = [Bid.id, Bid.title_uk, Bid.budget, Bid.created_at]
-    column_default_sort = [(Bid.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(Bid.id, False)]
 
     form_columns = [
         Bid.title_uk, Bid.title_en, Bid.title_pl, Bid.title_fr, Bid.title_de,
@@ -542,15 +512,11 @@ class BidAdmin(ModelView, model=Bid):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
-        # Переводим title поля
         await auto_translate_and_slug(data, field_prefix='title', generate_slugs=True)
-        # Переводим description поля (без slug)
         await auto_translate_and_slug(data, field_prefix='description', generate_slugs=False)
 
 
 class BlogArticleAdmin(ModelView, model=BlogArticle):
-    """Администрирование статей блога"""
     name = "BlogArticle"
     name_plural = "Blog Articles"
     icon = "fa-solid fa-newspaper"
@@ -561,7 +527,7 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
     ]
     column_searchable_list = [BlogArticle.title_uk, BlogArticle.title_en]
     column_sortable_list = [BlogArticle.id, BlogArticle.title_uk, BlogArticle.is_published, BlogArticle.created_at]
-    column_default_sort = [(BlogArticle.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(BlogArticle.id, False)]
 
     form_columns = [
         BlogArticle.title_uk, BlogArticle.title_en, BlogArticle.title_pl, BlogArticle.title_fr, BlogArticle.title_de,
@@ -579,19 +545,13 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
-        """Автоматический перевод и генерация slug перед сохранением"""
-        # Переводим title поля
         await auto_translate_and_slug(data, field_prefix='title', generate_slugs=True)
-        # Переводим content поля (без slug)
         await auto_translate_and_slug(data, field_prefix='content', generate_slugs=False)
-        # Переводим description поля (без slug)
         await auto_translate_and_slug(data, field_prefix='description', generate_slugs=False)
-        # Переводим keywords поля (без slug)
         await auto_translate_and_slug(data, field_prefix='keywords', generate_slugs=False)
 
 
 class PasswordResetTokenAdmin(ModelView, model=PasswordResetToken):
-    """Администрирование токенов сброса пароля"""
     name = "PasswordResetToken"
     name_plural = "Password Reset Tokens"
     icon = "fa-solid fa-key"
@@ -600,7 +560,7 @@ class PasswordResetTokenAdmin(ModelView, model=PasswordResetToken):
                    PasswordResetToken.is_used, PasswordResetToken.expires_at, PasswordResetToken.created_at]
     column_searchable_list = [PasswordResetToken.token, PasswordResetToken.code]
     column_sortable_list = [PasswordResetToken.id, PasswordResetToken.is_used, PasswordResetToken.created_at]
-    column_default_sort = [(PasswordResetToken.id, False)]  # Сортировка по ID по возрастанию
+    column_default_sort = [(PasswordResetToken.id, False)]
 
     form_columns = [PasswordResetToken.token, PasswordResetToken.code, PasswordResetToken.is_used, PasswordResetToken.expires_at]
 
@@ -612,9 +572,6 @@ class PasswordResetTokenAdmin(ModelView, model=PasswordResetToken):
 
 
 def setup_admin(app):
-    """Настройка и регистрация админки"""
-
-    # Создаем админку с аутентификацией
     admin = Admin(
         app=app,
         engine=engine,
@@ -623,7 +580,6 @@ def setup_admin(app):
         base_url="/admin"
     )
 
-    # Регистрируем все ModelView
     admin.add_view(UserAdmin)
     admin.add_view(CompanyAdmin)
     admin.add_view(CountryAdmin)

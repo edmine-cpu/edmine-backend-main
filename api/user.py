@@ -28,7 +28,6 @@ async def get_user(id: int):
 
 @router.post('/register')
 async def register_post(form_data: UserRegisterForm):
-    print(f"DEBUG: 123123123213213 user: {form_data}")
     return await UserServices.register_user(form_data)
 
 
@@ -42,16 +41,6 @@ async def logout_user(response: Response):
     response.delete_cookie(key= JWT_COOKIE_NAME, httponly=True, samesite="lax", secure=False, path="/")
     return {"detail": "Logged out"}
 
-
-# response.set_cookie(
-#     key=JWT_COOKIE_NAME,
-#     value=jwt_token,
-#     max_age=60 * 60 * 24 * 7,  # 7 дней
-#     httponly=True,
-#     secure=True,
-#     samesite="none",
-#     path="/",
-# )
 
 @router.post('/verify-code')
 async def verify_code_post(request: Request):

@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Настройки приложения с чтением из .env файла"""
+    """Application settings loaded from .env file"""
 
     model_config = SettingsConfigDict(
         env_file='.env',
@@ -12,43 +12,37 @@ class Settings(BaseSettings):
         extra='ignore'
     )
 
-    # Database settings
-    DB_HOST: str = Field(default="localhost", description="PostgreSQL хост")
-    DB_PORT: int = Field(default=5432, description="PostgreSQL порт")
-    DB_USER: str = Field(default="postgres", description="PostgreSQL пользователь")
-    DB_PASSWORD: str = Field(description="PostgreSQL пароль")
-    DB_NAME: str = Field(default="makeasap_dev", description="Имя базы данных")
+    DB_HOST: str = Field(default="localhost")
+    DB_PORT: int = Field(default=5432)
+    DB_USER: str = Field(default="postgres")
+    DB_PASSWORD: str = Field()
+    DB_NAME: str = Field(default="makeasap_dev")
 
-    # JWT settings
-    JWT_SECRET: str = Field(description="Секретный ключ для JWT")
-    JWT_ALGORITHM: str = Field(default="HS256", description="Алгоритм JWT")
-    JWT_EXPIRE_MINUTES: int = Field(default=60 * 24 * 7, description="Время жизни JWT токена в минутах")
-    JWT_COOKIE_NAME: str = Field(default="jwt_token", description="Имя cookie для JWT")
+    JWT_SECRET: str = Field()
+    JWT_ALGORITHM: str = Field(default="HS256")
+    JWT_EXPIRE_MINUTES: int = Field(default=60 * 24 * 7)
+    JWT_COOKIE_NAME: str = Field(default="jwt_token")
 
-    # Session settings
-    SESSION_SECRET_KEY: str = Field(description="Секретный ключ для сессий")
+    SESSION_SECRET_KEY: str = Field()
 
-    # SMTP settings
-    SMTP_HOST: str = Field(default="smtp.gmail.com", description="SMTP хост")
-    SMTP_PORT: int = Field(default=465, description="SMTP порт")
-    SENDER_EMAIL: str = Field(description="Email отправителя")
-    SENDER_PASSWORD: str = Field(description="Пароль SMTP")
+    SMTP_HOST: str = Field(default="smtp.gmail.com")
+    SMTP_PORT: int = Field(default=465)
+    SENDER_EMAIL: str = Field()
+    SENDER_PASSWORD: str = Field()
 
-    # App settings
-    APP_HOST: str = Field(default="0.0.0.0", description="Хост приложения")
-    APP_PORT: int = Field(default=8000, description="Порт приложения")
-    DEBUG: bool = Field(default=False, description="Режим отладки")
+    APP_HOST: str = Field(default="0.0.0.0")
+    APP_PORT: int = Field(default=8000)
+    DEBUG: bool = Field(default=False)
 
     @property
     def database_url(self) -> str:
-        """Генерирует URL для подключения к БД в формате Tortoise ORM"""
+        """Generate Tortoise ORM database URL"""
         return f"postgres://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
     def database_url_asyncpg(self) -> str:
-        """Генерирует URL для подключения к БД в формате asyncpg"""
+        """Generate asyncpg database URL"""
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 
-# Глобальный экземпляр настроек
 settings = Settings()
