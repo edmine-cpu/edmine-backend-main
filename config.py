@@ -1,20 +1,20 @@
-import os
 from contextlib import asynccontextmanager
 from tortoise import Tortoise
+from settings import settings
 
-DATABASE_URL = 'postgres://vir:WordPass_!forPostgres_@localhost:5432/makeasap'
+DATABASE_URL = settings.database_url
 
 DATABASE_MODULES = ["models"]
 
-JWT_SECRET_KEY = os.environ.get('JWT_SECRET') or 'my-secret-key-123'
-JWT_ALGORITHM = 'HS256'
-JWT_EXPIRE_MINUTES = 60 * 24 * 7
-JWT_COOKIE_NAME = 'jwt_token'
+JWT_SECRET_KEY = settings.JWT_SECRET
+JWT_ALGORITHM = settings.JWT_ALGORITHM
+JWT_EXPIRE_MINUTES = settings.JWT_EXPIRE_MINUTES
+JWT_COOKIE_NAME = settings.JWT_COOKIE_NAME
 
-SMTP_HOST = 'smtp.gmail.com'
-SMTP_PORT = 465
-SENDER_EMAIL = 'sorokinonetwofour@gmail.com'
-SENDER_PASSWORD = 'yxsw oglp tojt whui'
+SMTP_HOST = settings.SMTP_HOST
+SMTP_PORT = settings.SMTP_PORT
+SENDER_EMAIL = settings.SENDER_EMAIL
+SENDER_PASSWORD = settings.SENDER_PASSWORD
 CODE_RESEND_INTERVAL = 60
 VERIFICATION_CODE_LENGTH = 6
 

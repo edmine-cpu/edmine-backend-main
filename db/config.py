@@ -1,13 +1,15 @@
+from settings import settings
+
 TORTOISE_ORM = {
     "connections": {
         "default": {
             "engine": "tortoise.backends.asyncpg",
             "credentials": {
-                "database": "mydb",
-                "host": "127.0.0.1",
-                "user": "postgres",
-                "password": "WordPass_!forPostgres_@",
-                "port": 5432,
+                "database": settings.DB_NAME,
+                "host": settings.DB_HOST,
+                "user": settings.DB_USER,
+                "password": settings.DB_PASSWORD,
+                "port": settings.DB_PORT,
             }
         }
     },

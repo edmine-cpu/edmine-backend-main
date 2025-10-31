@@ -1,0 +1,31 @@
+# FastAPI и зависимости
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# Database
+tortoise-orm>=0.20.0
+asyncpg>=0.29.0
+aerich>=0.7.2
+
+# Pydantic settings
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Security
+bcrypt>=4.0.1
+python-jose[cryptography]>=3.3.0
+passlib>=1.7.4
+
+# Utils
+python-slugify>=8.0.0
+deep-translator>=1.11.4
+
+# CLI и логирование
+rich>=13.0.0
+
+# Email
+aiosmtplib>=3.0.0

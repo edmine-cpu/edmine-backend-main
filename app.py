@@ -4,8 +4,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from tortoise.contrib.fastapi import register_tortoise
-import os
-from dotenv import load_dotenv
+from settings import settings
 from api.admin import router as admin_router
 from api.bids import router as bids_router
 from api.blog import router as blog_router
@@ -26,7 +25,7 @@ app = FastAPI()
 # Добавляем SessionMiddleware для работы админки - ВАЖНО: должен быть первым!
 app.add_middleware(
     SessionMiddleware,
-    secret_key="your-super-secret-key-change-in-production",
+    secret_key=settings.SESSION_SECRET_KEY,
     session_cookie="admin_session",
     max_age=3600,  # 1 час
     same_site="lax",
@@ -115,12 +114,9 @@ class OptimizedStaticFiles(StaticFiles):
 
 app.mount("/static", OptimizedStaticFiles(directory="static"), name="static")
 
-load_dotenv()
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-
 register_tortoise(
     app,
-    db_url=f"postgres://postgres:{DB_PASSWORD}@0.0.0.0:5432/makeasap_dev",
+    db_url=settings.database_url,
     modules={
         "models": [
             "models.user",
