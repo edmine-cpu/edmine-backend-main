@@ -228,7 +228,7 @@ async def update_location(
         raise HTTPException(status_code=400, detail="City not found in selected country")
 
     user.country = country
-    user.city = city_obj
+    user.city = city_obj.name_en
     await user.save()
     
     return {"message": "Location updated successfully"}
