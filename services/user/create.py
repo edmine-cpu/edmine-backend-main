@@ -8,6 +8,9 @@ from models import User, Country
 from crud.users.get import get_user_by_email
 from api_old.security import hash_password
 from api_old.auth_api import EMAIL_VERIFICATION_CODES
+from typing import Dict, Any
+
+PENDING_REGISTRATIONS: Dict[str, Dict[str, Any]] = {}
 
 async def send_reset_email(email: str, code: str):
     """Отправка кода для сброса пароля"""
@@ -43,8 +46,6 @@ If you did not change your password, please contact support.
 class UserCreateMixin:
     @staticmethod
     async def register_user(user_form: UserRegisterForm):
-
-
         email = user_form.email.strip().lower()
         if not email:
             raise HTTPException(status_code=400, detail="Email обязателен")
@@ -67,41 +68,32 @@ class UserCreateMixin:
 
         hashed_password = hash_password(user_form.password)
         country = await Country.filter(id=user_form.country).first()
-        try:
-            user = await User.create(
-                name=user_form.name.strip(),
-                email=email,
-                password=hashed_password,
-                country=country,
-                city=user_form.city.strip(),
-                role=0,
-                user_role='user',
-                language=user_form.language or 'en'
-            )
 
-            # Generate verification code and ensure it's properly stored
+        try:
             verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
-            # Store the code BEFORE sending email
             EMAIL_VERIFICATION_CODES[email] = verification_code
 
-            
+            PENDING_REGISTRATIONS[email] = {
+                'name': user_form.name.strip(),
+                'email': email,
+                'password': hashed_password,
+                'country': country,
+                'city': user_form.city.strip(),
+                'role': 0,
+                'user_role': 'user',
+                'language': user_form.language or 'en'
+            }
+
             from api_old.email_utils import send_email
-            await send_email(user.email, verification_code)
-            
+            await send_email(email, verification_code)
 
             response = JSONResponse(
                 content={
-                    "message": "Пользователь зарегистрирован. Требуется верификация email.",
-                    "user": {
-                        "id": user.id,
-                        "email": user.email,
-                        "name": user.name,
-                        "role": user.role,
-                        "language": user.language
-                    },
+                    "message": "Код верификации отправлен на email. Требуется верификация.",
+                    "email": email,
                     "verification_required": True,
-                    "debug_code": verification_code  # Только для разработки
+                    "debug_code": verification_code
                 },
                 status_code=201
             )
@@ -109,22 +101,19 @@ class UserCreateMixin:
             return response
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Ошибка при создании пользователя: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Ошибка при отправке кода: {str(e)}")
 
     @staticmethod
     async def verify_email_code(request: Request):
         try:
             data = await request.json()
-            email = data.get('email', '').strip().lower()  # Normalize email
-            submitted_code = data.get('code', '').strip()  # Strip whitespace
-
+            email = data.get('email', '').strip().lower()
+            submitted_code = data.get('code', '').strip()
 
             if not email or not submitted_code:
                 raise HTTPException(status_code=400, detail="Email и код обязательны")
 
-            from api_old.auth_api import EMAIL_VERIFICATION_CODES
             expected_code = EMAIL_VERIFICATION_CODES.get(email)
-
 
             if not expected_code:
                 raise HTTPException(status_code=400, detail="Код верификации не найден или истек")
@@ -132,11 +121,22 @@ class UserCreateMixin:
             if submitted_code != expected_code:
                 raise HTTPException(status_code=400, detail="Неверный код верификации")
 
-            user = await User.get_or_none(email=email)
-            if not user:
-                raise HTTPException(status_code=404, detail="Пользователь не найден")
+            if email not in PENDING_REGISTRATIONS:
+                raise HTTPException(status_code=400, detail="Данные регистрации не найдены")
 
-            # Remove the code only after successful verification
+            registration_data = PENDING_REGISTRATIONS.pop(email)
+
+            user = await User.create(
+                name=registration_data['name'],
+                email=registration_data['email'],
+                password=registration_data['password'],
+                country=registration_data['country'],
+                city=registration_data['city'],
+                role=registration_data['role'],
+                user_role=registration_data['user_role'],
+                language=registration_data['language']
+            )
+
             EMAIL_VERIFICATION_CODES.pop(email, None)
 
             jwt_token = await create_jwt_token(user.id, user.email, user.language, user.role)
@@ -176,7 +176,7 @@ Congratulations! Your MakeASAP account has been successfully registered.
             response.set_cookie(
                 key=JWT_COOKIE_NAME,
                 value=jwt_token,
-                max_age=60 * 60 * 24 * 7,  # 7 дней
+                max_age=60 * 60 * 24 * 7,
                 httponly=True,
                 secure=False,
                 samesite="lax",
