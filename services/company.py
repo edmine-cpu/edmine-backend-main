@@ -123,37 +123,35 @@ class CompanyService:
         ))
         
         async def update_translations():
-            try:
-                translations = await translation_task
-                update_data = {
-                    'name_uk': translations['name_uk'],
-                    'name_en': translations['name_en'],
-                    'name_pl': translations['name_pl'],
-                    'name_fr': translations['name_fr'],
-                    'name_de': translations['name_de'],
-                    'description_uk': translations['description_uk'],
-                    'description_en': translations['description_en'],
-                    'description_pl': translations['description_pl'],
-                    'description_fr': translations['description_fr'],
-                    'description_de': translations['description_de'],
-                    'auto_translated_fields': translations['auto_translated_fields']
-                }
-                
-                from api_old.slug_utils import generate_company_slugs
-                slugs = await generate_company_slugs(
-                    name_uk=translations['name_uk'],
-                    name_en=translations['name_en'],
-                    name_pl=translations['name_pl'],
-                    name_fr=translations['name_fr'],
-                    name_de=translations['name_de'],
-                    company_id=result.id
-                )
-                
-                update_data.update(slugs)
-                
-                await CompanyCRUD.update_company(result.id, update_data)
-                
-            except Exception as e:
+            translations = await translation_task
+            update_data = {
+                'name_uk': translations['name_uk'],
+                'name_en': translations['name_en'],
+                'name_pl': translations['name_pl'],
+                'name_fr': translations['name_fr'],
+                'name_de': translations['name_de'],
+                'description_uk': translations['description_uk'],
+                'description_en': translations['description_en'],
+                'description_pl': translations['description_pl'],
+                'description_fr': translations['description_fr'],
+                'description_de': translations['description_de'],
+                'auto_translated_fields': translations['auto_translated_fields']
+            }
+            
+            from api_old.slug_utils import generate_company_slugs
+            slugs = await generate_company_slugs(
+                name_uk=translations['name_uk'],
+                name_en=translations['name_en'],
+                name_pl=translations['name_pl'],
+                name_fr=translations['name_fr'],
+                name_de=translations['name_de'],
+                company_id=result.id
+            )
+            
+            update_data.update(slugs)
+            
+            await CompanyCRUD.update_company(result.id, update_data)
+            
         
         asyncio.create_task(update_translations())
         

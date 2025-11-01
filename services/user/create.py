@@ -1,35 +1,34 @@
 import random
+import re
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from schemas.user import UserRegisterForm
 from services.user.security.utils import create_jwt_token, JWT_COOKIE_NAME
 from models import User, Country
 from crud.users.get import get_user_by_email
-
+from api_old.security import hash_password
+from api_old.auth_api import EMAIL_VERIFICATION_CODES
 
 async def send_reset_email(email: str, code: str):
     """Отправка кода для сброса пароля"""
-    try:
-        from api_old.email_utils import send_email
-        await send_email(email, code)
-    except Exception as e:
+    from api_old.email_utils import send_email
+    await send_email(email, code)
 
 
 async def send_password_changed_notification(email: str):
     """Отправка уведомления об успешной смене пароля"""
-    try:
-        from services.user.email.smtp_client import SMTPClient
-        from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
+    from services.user.email.smtp_client import SMTPClient
+    from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
 
-        smtp_client = SMTPClient(
+    smtp_client = SMTPClient(
             host=SMTP_HOST,
             port=SMTP_PORT,
             username=SENDER_EMAIL,
             password=SENDER_PASSWORD
         )
 
-        subject = "Пароль успішно змінено / Password Successfully Changed"
-        body = f"""
+    subject = "Пароль успішно змінено / Password Successfully Changed"
+    body = f"""
 Ваш пароль було успішно змінено.
 
 Your password has been successfully changed.
@@ -38,19 +37,13 @@ Your password has been successfully changed.
 If you did not change your password, please contact support.
         """
 
-        await smtp_client.send_email(email, subject, body)
-    except Exception as e:
+    await smtp_client.send_email(email, subject, body)
 
 
 class UserCreateMixin:
     @staticmethod
     async def register_user(user_form: UserRegisterForm):
-        import re
-        from fastapi import HTTPException
-        from fastapi.responses import JSONResponse
-        from api_old.security import hash_password
-        from models.user import User
-        from api_old.auth_api import EMAIL_VERIFICATION_CODES
+
 
         email = user_form.email.strip().lower()
         if not email:
@@ -92,10 +85,10 @@ class UserCreateMixin:
             # Store the code BEFORE sending email
             EMAIL_VERIFICATION_CODES[email] = verification_code
 
-            try:
-                from api_old.email_utils import send_email
-                await send_email(user.email, verification_code)
-            except Exception as e:
+            
+            from api_old.email_utils import send_email
+            await send_email(user.email, verification_code)
+            
 
             response = JSONResponse(
                 content={
@@ -164,25 +157,21 @@ class UserCreateMixin:
                 status_code=200
             )
 
-            try:
-                from services.user.email.smtp_client import SMTPClient
-                from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
-
-                smtp_client = SMTPClient(
-                    host=SMTP_HOST,
-                    port=SMTP_PORT,
-                    username=SENDER_EMAIL,
-                    password=SENDER_PASSWORD
-                )
-
-                subject = "Зареєстровані успішно / Registered Successfully"
-                body = f"""
+            from services.user.email.smtp_client import SMTPClient
+            from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
+            smtp_client = SMTPClient(
+                host=SMTP_HOST,
+                port=SMTP_PORT,
+                username=SENDER_EMAIL,
+                password=SENDER_PASSWORD
+            )
+            subject = "Зареєстровані успішно / Registered Successfully"
+            body = f"""
 Вітаємо! Ваш акаунт на MakeASAP був успішно створений.
 
 Congratulations! Your MakeASAP account has been successfully registered.
 """
-                await smtp_client.send_email(user.email, subject, body)
-            except Exception as e:
+            await smtp_client.send_email(user.email, subject, body)
 
             response.set_cookie(
                 key=JWT_COOKIE_NAME,

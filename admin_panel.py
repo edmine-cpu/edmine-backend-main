@@ -92,8 +92,8 @@ class AdminAuth(AuthenticationBackend):
 
     async def login(self, request: Request) -> bool:
         form = await request.form()
-        username = form.get("username")
-        password = form.get("password")
+        username = form.get("username", "").strip()
+        password = form.get("password", "").strip()
 
         if username == "test" and password == "test":
             request.session["admin_logged_in"] = True

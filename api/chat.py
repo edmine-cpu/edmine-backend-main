@@ -373,10 +373,8 @@ async def translate_chat_messages(
                 detail=f"Неподдерживаемый язык. Поддерживаемые языки: {', '.join(SUPPORTED_LANGUAGES)}"
             )
 
-        # Определяем партнера (собеседника)
         partner_id = chat.user2_id if chat.user1_id == current_user.id else chat.user1_id
 
-        # Получаем все сообщения от собеседника
         partner_messages = await Message.filter(
             chat_id=chat_id,
             sender__id=partner_id
@@ -386,7 +384,6 @@ async def translate_chat_messages(
         
         for message in partner_messages:
             if not message.content or not message.content.strip():
-                # Пропускаем пустые сообщения или сообщения только с файлами
                 translated_messages.append({
                     "id": message.id,
                     "original_content": message.content,
@@ -397,11 +394,9 @@ async def translate_chat_messages(
                 })
                 continue
             
-            # Определяем язык сообщения
             detected_language = await detect_message_language(message.content)
             print(f"Message '{message.content}' detected as language: {detected_language}")
             
-            м только если язык отличается от целевого
             translated_content = message.content
             translation_available = True
             

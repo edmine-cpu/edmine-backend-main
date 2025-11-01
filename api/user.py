@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Request, Response, Depends, HTTPException, Query
-from typing import Optional
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, Query, Form
+from typing import Optional, List
 
 from services.user.security.utils import JWT_COOKIE_NAME
 from services.user.service import UserServices
@@ -27,7 +27,28 @@ async def get_user(id: int):
 
 
 @router.post('/register')
-async def register_post(form_data: UserRegisterForm):
+async def register_post(
+    name: str = Form(...),
+    email: str = Form(...),
+    country: int = Form(...),
+    city: str = Form(...),
+    password: str = Form(...),
+    role: Optional[str] = Form('user'),
+    language: Optional[str] = Form('en'),
+    categories: Optional[List[str]] = Form(None),
+    subcategories: Optional[List[str]] = Form(None)
+):
+    form_data = UserRegisterForm(
+        name=name,
+        email=email,
+        country=country,
+        city=city,
+        password=password,
+        role=role,
+        language=language,
+        categories=categories or [],
+        subcategories=subcategories or []
+    )
     return await UserServices.register_user(form_data)
 
 

@@ -170,35 +170,33 @@ class BidService:
         ))
         
         async def update_translations():
-            try:
-                translation_result = await translation_task
-                update_data = {
-                    'title_uk': translation_result['title_uk'],
-                    'title_en': translation_result['title_en'],
-                    'title_pl': translation_result['title_pl'],
-                    'title_fr': translation_result['title_fr'],
-                    'title_de': translation_result['title_de'],
-                    'description_uk': translation_result['description_uk'],
-                    'description_en': translation_result['description_en'],
-                    'description_pl': translation_result['description_pl'],
-                    'description_fr': translation_result['description_fr'],
-                    'description_de': translation_result['description_de'],
-                    'auto_translated_fields': translation_result['auto_translated_fields']
-                }
+            translation_result = await translation_task
+            update_data = {
+                'title_uk': translation_result['title_uk'],
+                'title_en': translation_result['title_en'],
+                'title_pl': translation_result['title_pl'],
+                'title_fr': translation_result['title_fr'],
+                'title_de': translation_result['title_de'],
+                'description_uk': translation_result['description_uk'],
+                'description_en': translation_result['description_en'],
+                'description_pl': translation_result['description_pl'],
+                'description_fr': translation_result['description_fr'],
+                'description_de': translation_result['description_de'],
+                'auto_translated_fields': translation_result['auto_translated_fields']
+            }
                 
-                slugs = await generate_bid_slugs(
-                    title_uk=update_data['title_uk'],
-                    title_en=update_data['title_en'],
-                    title_pl=update_data['title_pl'],
-                    title_fr=update_data['title_fr'],
-                    title_de=update_data['title_de'],
-                    bid_id=bid.id
-                )
+            slugs = await generate_bid_slugs(
+                title_uk=update_data['title_uk'],
+                title_en=update_data['title_en'],
+                title_pl=update_data['title_pl'],
+                title_fr=update_data['title_fr'],
+                title_de=update_data['title_de'],
+                bid_id=bid.id
+            )
+            
+            update_data.update(slugs)
+            await BidCRUD.update_bid(bid, update_data)
                 
-                update_data.update(slugs)
-                await BidCRUD.update_bid(bid, update_data)
-                
-            except Exception as e:
         
         asyncio.create_task(update_translations())
         
@@ -232,11 +230,10 @@ class BidService:
 
         if bid.files:
             for file_path in bid.files:
-                try:
-                    full_path = os.path.join(os.getcwd(), file_path.lstrip('/'))
-                    if os.path.exists(full_path):
-                        os.remove(full_path)
-                except Exception as e:
+
+                full_path = os.path.join(os.getcwd(), file_path.lstrip('/'))
+                if os.path.exists(full_path):
+                    os.remove(full_path)
 
         await BidCRUD.delete_bid(bid)
         return JSONResponse({'success': True})

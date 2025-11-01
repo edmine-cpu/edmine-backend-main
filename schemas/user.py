@@ -29,15 +29,8 @@ class UserRegisterForm(BaseModel):
     password: Annotated[str, Field(min_length=8)]
     role: Optional[str] = 'user'
     language: Optional[str] = 'en'
-    categories: Optional[List[str]] = []
-    subcategories: Optional[List[str]] = []
-
-    @field_validator('language')
-    def check_language(cls, v):
-        allowed = {'uk', 'en', 'pl', 'de', 'fr'}
-        if v not in allowed:
-            raise ValueError('Unsupported language')
-        return v
+    categories: Optional[List[str]] = Field(default_factory=list)
+    subcategories: Optional[List[str]] = Field(default_factory=list)
 
 
 class UserUpdateSchema(BaseModel):

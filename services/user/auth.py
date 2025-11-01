@@ -15,14 +15,12 @@ class AuthMixin:
         email = form_data.email.strip().lower()
         password = form_data.password
 
-        ация email
         if not email:
             raise HTTPException(status_code=400, detail="Email обязателен")
 
         if not re.match(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$", email):
             raise HTTPException(status_code=400, detail="Неверный формат email")
 
-        ация пароля
         if not password:
             raise HTTPException(status_code=400, detail="Пароль обязателен")
 
@@ -36,7 +34,6 @@ class AuthMixin:
         if not user:
             raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
-        ка пароля
         if not verify_password(password, user.password):
             raise HTTPException(status_code=401, detail="Неверный email или пароль")
 

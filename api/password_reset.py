@@ -12,26 +12,24 @@ async def test_password_reset():
 
 async def send_reset_email(email: str, code: str):
     """Send password reset code"""
-    try:
-        from api_old.email_utils import send_email
-        await send_email(email, code)
-    except Exception as e:
+    from api_old.email_utils import send_email
+    await send_email(email, code)
 
 async def send_password_changed_notification(email: str):
     """Send password change notification"""
-    try:
-        from services.user.email.smtp_client import SMTPClient
-        from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
 
-        smtp_client = SMTPClient(
+    from services.user.email.smtp_client import SMTPClient
+    from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
+
+    smtp_client = SMTPClient(
             host=SMTP_HOST,
             port=SMTP_PORT,
             username=SENDER_EMAIL,
             password=SENDER_PASSWORD
         )
 
-        subject = "Пароль успішно змінено / Password Successfully Changed"
-        body = f"""
+    subject = "Пароль успішно змінено / Password Successfully Changed"
+    body = f"""
 Ваш пароль було успішно змінено.
 
 Your password has been successfully changed.
@@ -40,8 +38,7 @@ Your password has been successfully changed.
 If you did not change your password, please contact support.
         """
 
-        await smtp_client.send_email(email, subject, body)
-    except Exception as e:
+    await smtp_client.send_email(email, subject, body)
 
 
 async def parse_request(request: Request):
@@ -61,7 +58,6 @@ async def forgot_password(email: str = Form(...)):
         if not user:
             return JSONResponse({"message": "Password reset requested successfully", "email": email})
 
-        ация кода
         verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
 
         from api_old.auth_api import EMAIL_VERIFICATION_CODES
@@ -76,7 +72,6 @@ async def forgot_password(email: str = Form(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-ка кода сброса пароля ===
 @router.post("/verify-reset-code")
 async def verify_reset_code(email: str = Form(...), code: str = Form(...)):
     try:
@@ -124,14 +119,11 @@ async def reset_password(request: Request):
     user.password = hashed_password
     await user.save()
 
-    try:
-        await send_password_changed_notification(email)
-    except Exception as e:
+    await send_password_changed_notification(email)
 
     return JSONResponse({"message": "Password successfully reset"})
 
 
-ка токена сброса пароля ===
 @router.get("/verify-reset-token")
 async def verify_reset_token(token: str):
     try:

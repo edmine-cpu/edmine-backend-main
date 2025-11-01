@@ -20,7 +20,7 @@ def detect_primary_language_description(description_uk=None, description_en=None
                        ('fr', description_fr), ('de', description_de)]:
         if desc and desc.strip():
             return lang
-    return 'uk'  # дефолт
+    return 'en'  
 
 async def auto_translate_company_fields(
     name: Optional[str] = None,
@@ -38,7 +38,7 @@ async def auto_translate_company_fields(
 
     result = {
         'name': name,
-        'name_uk': name_uk or name,  # Используем основное название как украинское
+        'name_uk': name_uk or name,  
         'name_en': name_en,
         'name_pl': name_pl,
         'name_fr': name_fr,
@@ -54,11 +54,9 @@ async def auto_translate_company_fields(
     from .utils import translate_text_batch_with_semaphore
     texts_to_translate = []
     
-    # Определяем основной язык для названия (если есть украинское, используем его)
     primary_name_lang = 'uk'
     primary_name = result['name_uk']
     
-    м название компании
     if primary_name and primary_name.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_name_lang:
@@ -71,13 +69,11 @@ async def auto_translate_company_fields(
                         'target_lang': lang
                     })
     
-    # Определяем основной язык для описания
     primary_desc_lang = detect_primary_language_description(
         description_uk, description_en, description_pl, description_fr, description_de
     )
     primary_desc = result[f'description_{primary_desc_lang}']
 
-    м описание компании
     if primary_desc and primary_desc.strip():
         for lang in SUPPORTED_LANGUAGES:
             if lang != primary_desc_lang:
@@ -90,7 +86,6 @@ async def auto_translate_company_fields(
                         'target_lang': lang
                     })
     
-    # Выполняем все переводы параллельно с ограничением одновременных запросов
     if texts_to_translate:
         translation_results = await translate_text_batch_with_semaphore(texts_to_translate, max_concurrent=3)
         
@@ -101,7 +96,6 @@ async def auto_translate_company_fields(
 
     return result
 
-# Совместимость со старым названием функции
 async def auto_translate_descriptions(
     description_uk: Optional[str] = None,
     description_en: Optional[str] = None,
@@ -109,7 +103,6 @@ async def auto_translate_descriptions(
     description_fr: Optional[str] = None,
     description_de: Optional[str] = None
 ) -> Dict[str, Optional[str]]:
-    """Обратная совместимость со старым названием функции"""
     return await auto_translate_company_fields(
         name=None,
         description_uk=description_uk,
