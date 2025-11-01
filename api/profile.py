@@ -213,25 +213,22 @@ async def update_categories(
 @router.put("/profile/location")
 async def update_location(
     country_id: int = Form(...),
-    city: str = Form(...),
+    city: int = Form(...),
     user: User = Depends(get_current_user_dependency)
 ):
-    """Update user country and city"""
-    # Validate country
+
     country = await Country.get_or_none(id=country_id)
     if not country:
         raise HTTPException(status_code=400, detail="Invalid country")
     
-    # Validate city exists in the country
     city_obj = await City.filter(country=country, id=city).first()
 
-    
+
     if not city_obj:
         raise HTTPException(status_code=400, detail="City not found in selected country")
-    
-    # Update user location
+
     user.country = country
-    user.city = await City.filter(id=city).first()
+    user.city = city_obj
     await user.save()
     
     return {"message": "Location updated successfully"}
