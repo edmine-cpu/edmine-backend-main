@@ -15,7 +15,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-DATABASE_URL = f"postgresql+asyncpg://postgres:{DB_PASSWORD}@0.0.0.0:5432/makeasap_dev"
+DB_NAME = os.getenv("DB_NAME", "makeasap_dev")
+DATABASE_URL = f"postgresql+asyncpg://postgres:{DB_PASSWORD}@0.0.0.0:5432/{DB_NAME}"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 

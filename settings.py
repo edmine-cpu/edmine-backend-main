@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     DB_PORT: int = Field(default=5432)
     DB_USER: str = Field(default="postgres")
     DB_PASSWORD: str = Field()
-    DB_NAME: str = Field(default="makeasap_dev")
+    DB_NAME: str = Field(default="makeasap")
 
     JWT_SECRET: str = Field()
     JWT_ALGORITHM: str = Field(default="HS256")
