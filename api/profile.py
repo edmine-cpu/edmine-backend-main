@@ -223,11 +223,8 @@ async def update_location(
         raise HTTPException(status_code=400, detail="Invalid country")
     
     # Validate city exists in the country
-    city_obj = await City.filter(country=country, name_uk=city).first()
-    if not city_obj:
-        city_obj = await City.filter(country=country, name_en=city).first()
-    if not city_obj:
-        city_obj = await City.filter(country=country, name_pl=city).first()
+    city_obj = await City.filter(country=country, id=city).first()
+
     
     if not city_obj:
         raise HTTPException(status_code=400, detail="City not found in selected country")
