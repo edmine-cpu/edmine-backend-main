@@ -231,7 +231,7 @@ async def update_location(
     
     # Update user location
     user.country = country
-    user.city = city
+    user.city = await City.filter(id=city)
     await user.save()
     
     return {"message": "Location updated successfully"}
