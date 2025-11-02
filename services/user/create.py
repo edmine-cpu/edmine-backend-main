@@ -133,7 +133,7 @@ class UserCreateMixin:
                 country=registration_data['country'],
                 city=registration_data['city'],
                 role=registration_data['role'],
-                user_role=registration_data['user_role'],
+                user_role='executor',
                 language=registration_data['language']
             )
 

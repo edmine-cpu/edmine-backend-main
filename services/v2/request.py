@@ -100,11 +100,12 @@ async def get_bids_filtered(
         # Используем запрошенный язык напрямую
         slug_field = f"slug_{language}"
         title_field = f"title_{language}"
+        description_field = f"description_{language}"
 
         # Fallback на английский если нет в запрошенном языке
         title = getattr(bid, title_field, None) or getattr(bid, "title_en", "") or ""
         slug = getattr(bid, slug_field, None) or getattr(bid, "slug_en", "") or ""
-
+        description = getattr(bid, description_field, None) or getattr(bid, "description_en", "") or ""
         # ЗАКОММЕНТИРОВАНО: использование main_language (для будущего использования)
         # bid_lang = bid.main_language if bid.main_language else language
         # slug_field = f"slug_{bid_lang}"
@@ -120,6 +121,7 @@ async def get_bids_filtered(
 
         results.append({
             "title": title,
+            "description": description,
             "subcprice": bid.budget,
             "cost": cost,
             "category": bid.categories if bid.categories else [],
