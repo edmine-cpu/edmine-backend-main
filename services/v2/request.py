@@ -106,6 +106,7 @@ async def get_bids_filtered(
         title = getattr(bid, title_field, None) or getattr(bid, "title_en", "") or ""
         slug = getattr(bid, slug_field, None) or getattr(bid, "slug_en", "") or ""
         description = getattr(bid, description_field, None) or getattr(bid, "description_en", "") or ""
+        print("################# " + description)
         # ЗАКОММЕНТИРОВАНО: использование main_language (для будущего использования)
         # bid_lang = bid.main_language if bid.main_language else language
         # slug_field = f"slug_{bid_lang}"
