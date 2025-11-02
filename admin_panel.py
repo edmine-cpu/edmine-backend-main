@@ -568,11 +568,21 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
         BlogArticle.content_uk, BlogArticle.content_en, BlogArticle.content_pl, BlogArticle.content_fr, BlogArticle.content_de,
         BlogArticle.description_uk, BlogArticle.description_en, BlogArticle.description_pl, BlogArticle.description_fr, BlogArticle.description_de,
         BlogArticle.keywords_uk, BlogArticle.keywords_en, BlogArticle.keywords_pl, BlogArticle.keywords_fr, BlogArticle.keywords_de,
-        BlogArticle.author_id, BlogArticle.is_published, BlogArticle.featured_image, 'upload_image'
+        BlogArticle.author_id, BlogArticle.is_published, BlogArticle.featured_image
     ]
 
-    form_extra_fields = {
-        'upload_image': FileField('Загрузить изображение', validators=[Optional()])
+    form_excluded_columns = [BlogArticle.created_at, BlogArticle.updated_at]
+
+    form_overrides = {
+        'featured_image': FileField
+    }
+
+    form_args = {
+        'featured_image': {
+            'label': 'Изображение статьи',
+            'validators': [Optional()],
+            'render_kw': {'accept': 'image/*'}
+        }
     }
 
     page_size = 30
@@ -584,12 +594,16 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
         # Обработка загрузки файла
         form = await request.form()
-        if 'upload_image' in form:
-            file = form.get('upload_image')
+        if 'featured_image' in form:
+            file = form.get('featured_image')
             if file and hasattr(file, 'filename') and file.filename:
                 file_path = await save_uploaded_file(file)
                 if file_path:
                     data['featured_image'] = file_path
+            elif not data.get('featured_image'):
+                # Если файл не загружен и нет URL, сохраняем старое значение
+                if model and hasattr(model, 'featured_image'):
+                    data['featured_image'] = model.featured_image
 
         await auto_translate_and_slug(data, field_prefix='title', generate_slugs=True)
         await auto_translate_and_slug(data, field_prefix='content', generate_slugs=False)
