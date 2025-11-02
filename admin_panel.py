@@ -571,8 +571,6 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
         BlogArticle.author_id, BlogArticle.is_published, BlogArticle.featured_image
     ]
 
-    form_excluded_columns = [BlogArticle.created_at, BlogArticle.updated_at]
-
     form_overrides = {
         'featured_image': FileField
     }
