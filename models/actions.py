@@ -80,7 +80,7 @@ class BlogArticle(models.Model):
     keywords_fr = fields.CharField(max_length=500, null=True)
     keywords_de = fields.CharField(max_length=500, null=True)
     
-    author = fields.ForeignKeyField('models.User', related_name='blog_articles')
+    author = fields.ForeignKeyField('models.User', related_name='blog_articles', null=True)
     
     is_published = fields.BooleanField(default=False)
     
