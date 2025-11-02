@@ -25,6 +25,7 @@ class BidSearchParams(BaseModel):
 class BidItemResponse(BaseModel):
     """Один бид в списке"""
     title: str
+    description: str
     subcprice: Optional[str] = None
     cost: Optional[int] = None  # Стоимость (budget как число)
     category: Optional[List[int]] = None  # ID категорий
