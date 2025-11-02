@@ -11,6 +11,10 @@ from deep_translator import GoogleTranslator
 import asyncio
 import os
 from dotenv import load_dotenv
+from wtforms import FileField
+from wtforms.validators import Optional
+from werkzeug.utils import secure_filename
+from pathlib import Path
 
 load_dotenv()
 
@@ -24,11 +28,39 @@ Base = declarative_base()
 
 SUPPORTED_LANGUAGES = ['uk', 'en', 'pl', 'fr', 'de']
 
+# Настройка путей для загрузки файлов
+UPLOAD_DIR = Path("static/uploads/blog")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
 def generate_slug(text: str, lang: str = 'en') -> str:
     """Generate slug from text"""
     if not text or not text.strip():
         return ""
     return slugify(text, max_length=128)
+
+async def save_uploaded_file(file_data) -> str:
+    """Save uploaded file and return path"""
+    if not file_data:
+        return ""
+
+    # Получаем имя файла
+    filename = secure_filename(file_data.filename)
+
+    # Генерируем уникальное имя файла
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    name, ext = os.path.splitext(filename)
+    unique_filename = f"{timestamp}_{name}{ext}"
+
+    # Полный путь к файлу
+    file_path = UPLOAD_DIR / unique_filename
+
+    # Сохраняем файл
+    with open(file_path, "wb") as f:
+        content = await file_data.read()
+        f.write(content)
+
+    # Возвращаем относительный путь для сохранения в БД
+    return f"/static/uploads/blog/{unique_filename}"
 
 async def translate_field(text: str, source_lang: str, target_lang: str) -> str:
     """Translate text from one language to another"""
@@ -536,8 +568,12 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
         BlogArticle.content_uk, BlogArticle.content_en, BlogArticle.content_pl, BlogArticle.content_fr, BlogArticle.content_de,
         BlogArticle.description_uk, BlogArticle.description_en, BlogArticle.description_pl, BlogArticle.description_fr, BlogArticle.description_de,
         BlogArticle.keywords_uk, BlogArticle.keywords_en, BlogArticle.keywords_pl, BlogArticle.keywords_fr, BlogArticle.keywords_de,
-        BlogArticle.author_id, BlogArticle.is_published, BlogArticle.featured_image
+        BlogArticle.author_id, BlogArticle.is_published, BlogArticle.featured_image, 'upload_image'
     ]
+
+    form_extra_fields = {
+        'upload_image': FileField('Загрузить изображение', validators=[Optional()])
+    }
 
     page_size = 30
     can_create = True
@@ -546,6 +582,15 @@ class BlogArticleAdmin(ModelView, model=BlogArticle):
     can_view_details = True
 
     async def on_model_change(self, data: dict, model, is_created: bool, request: Request) -> None:
+        # Обработка загрузки файла
+        form = await request.form()
+        if 'upload_image' in form:
+            file = form.get('upload_image')
+            if file and hasattr(file, 'filename') and file.filename:
+                file_path = await save_uploaded_file(file)
+                if file_path:
+                    data['featured_image'] = file_path
+
         await auto_translate_and_slug(data, field_prefix='title', generate_slugs=True)
         await auto_translate_and_slug(data, field_prefix='content', generate_slugs=False)
         await auto_translate_and_slug(data, field_prefix='description', generate_slugs=False)
