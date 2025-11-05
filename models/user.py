@@ -6,8 +6,6 @@ class User(models.Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=64)
     email = fields.CharField(max_length=64, unique=True)
-    city = fields.CharField(max_length=64)
-    country = fields.ForeignKeyField('models.Country', related_name='users', null=True)
     password = fields.CharField(max_length=128)
     categories = fields.ManyToManyField('models.Category', related_name='users')
     subcategories = fields.ManyToManyField('models.UnderCategory', related_name='users', null=True)
@@ -15,10 +13,10 @@ class User(models.Model):
     language = fields.CharField(max_length=2, default='en')
     
     # Profile fields
-    nickname = fields.CharField(max_length=64, null=True)  # display name
-    avatar = fields.CharField(max_length=500, null=True)  # path to avatar file
-    user_role = fields.CharField(max_length=20, default='customer')  # customer, executor, both
-    profile_description = fields.TextField(null=True)  # user bio/description
+    nickname = fields.CharField(max_length=64, null=True)
+    avatar = fields.CharField(max_length=500, null=True)
+    user_role = fields.CharField(max_length=20, default='customer')
+    profile_description = fields.TextField(null=True)
     
     slug_uk = fields.CharField(max_length=128, null=True)
     slug_en = fields.CharField(max_length=128, null=True)

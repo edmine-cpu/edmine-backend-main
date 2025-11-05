@@ -13,8 +13,6 @@ class UserProfileResponse(BaseModel):
     id: int
     name: str
     email: str
-    city: str
-    country: Optional[str]
     company_name: Dict[str, Optional[str]]
     company_description: Dict[str, Optional[str]]
     categories: Optional[List[Dict[str, Any]]] = None
@@ -24,13 +22,10 @@ class UserProfileResponse(BaseModel):
 class UserRegisterForm(BaseModel):
     name: Annotated[str, Field(min_length=1)]
     email: EmailStr
-    country: int
-    city: Annotated[str, Field(min_length=1)]
     password: Annotated[str, Field(min_length=8)]
     role: Optional[str] = 'user'
     language: Optional[str] = 'en'
-    categories: Optional[List[str]] = Field(default_factory=list)
-    subcategories: Optional[List[str]] = Field(default_factory=list)
+
 
 
 class UserUpdateSchema(BaseModel):

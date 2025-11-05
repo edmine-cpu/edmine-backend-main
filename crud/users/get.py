@@ -7,14 +7,14 @@ class UserGetMixin():
     async def get_users(search: str = None):
         if search:
             search_lower = search.lower()
-            all_users = await User.all().prefetch_related("country", "categories", "subcategories")
+            all_users = await User.all().prefetch_related("categories", "subcategories")
             users = [
                 user for user in all_users 
                 if (user.name and search_lower in user.name.lower()) or
                    (user.email and search_lower in user.email.lower())
             ]
         else:
-            users = await User.all().prefetch_related("country", "categories", "subcategories")
+            users = await User.all().prefetch_related("categories", "subcategories")
         
         if not users:
             return []
@@ -24,8 +24,6 @@ class UserGetMixin():
                 id=u.id,
                 name=u.name,
                 email=u.email,
-                city=u.city,
-                country=u.country.name_en if u.country else None,
                 company_name={
                     "uk": u.company_name_uk,
                     "en": u.company_name_en,
@@ -49,7 +47,7 @@ class UserGetMixin():
         
     @staticmethod
     async def get_user_by_id(id: int):
-        user = await User.get_or_none(id=id).prefetch_related("country", "categories", "subcategories")
+        user = await User.get_or_none(id=id).prefetch_related("categories", "subcategories")
         
         if user is None:
             return None
@@ -58,8 +56,6 @@ class UserGetMixin():
             id=user.id,
             name=user.name,
             email=user.email,
-            city=user.city,
-            country=user.country.name_en if user.country else None,
             company_name={
                 "uk": user.company_name_uk,
                 "en": user.company_name_en,
@@ -90,7 +86,7 @@ async def get_users(search: str = None):
 
 async def get_user_by_email(email: str):
     """Get user by email - standalone function"""
-    user = await User.get_or_none(email=email).prefetch_related("country")
+    user = await User.get_or_none(email=email)
     
     if user is None:
         return None
@@ -99,8 +95,6 @@ async def get_user_by_email(email: str):
         id=user.id,
         name=user.name,
         email=user.email,
-        city=user.city,
-        country=user.country.name_en if user.country else None,
         company_name={
             "uk": user.company_name_uk,
             "en": user.company_name_en,

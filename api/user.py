@@ -22,34 +22,13 @@ async def get_users(search: Optional[str] = Query(None)):
 
 @router.get("/user/{id}")
 async def get_user(id: int):
-    user = await UserServices.get_user_by_id(id=id)
+    user = await UserServices.get_user_by_id(user_id=id)
     return user
 
 
 @router.post('/register')
-async def register_post(
-    name: str = Form(...),
-    email: str = Form(...),
-    country: int = Form(...),
-    city: str = Form(...),
-    password: str = Form(...),
-    role: Optional[str] = Form('user'),
-    language: Optional[str] = Form('en'),
-    categories: Optional[List[str]] = Form(None),
-    subcategories: Optional[List[str]] = Form(None)
-):
-    form_data = UserRegisterForm(
-        name=name,
-        email=email,
-        country=country,
-        city=city,
-        password=password,
-        role=role,
-        language=language,
-        categories=categories or [],
-        subcategories=subcategories or []
-    )
-    return await UserServices.register_user(form_data)
+async def register_post(data: UserRegisterForm):
+    return await UserServices.register_user(data)
 
 
 @router.post("/login")

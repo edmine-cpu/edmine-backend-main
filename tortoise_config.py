@@ -1,6 +1,6 @@
 TORTOISE_ORM = {
     "connections": {
-        "default": "postgres://postgres:WordPass_!forPostgres_%40@127.0.0.1:5432/makeasap_dev"
+        "default": "postgres://postgres:7f26NSk2WG657Peoh1petvfII35Pu7eYz43I98rd0@127.0.0.1:5432/makeasap_dev"
     },
     "apps": {
         "models": {

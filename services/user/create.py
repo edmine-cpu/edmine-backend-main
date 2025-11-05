@@ -47,27 +47,18 @@ class UserCreateMixin:
     @staticmethod
     async def register_user(user_form: UserRegisterForm):
         email = user_form.email.strip().lower()
-        if not email:
-            raise HTTPException(status_code=400, detail="Email обязателен")
-
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            raise HTTPException(status_code=400, detail="Неверный формат email")
 
         existing_user = await get_user_by_email(email)
         if existing_user:
-            raise HTTPException(status_code=400, detail="Пользователь с таким email уже существует")
+            raise HTTPException(status_code=409, detail="User with this email already exists")
 
         if not user_form.name or len(user_form.name.strip()) < 2:
-            raise HTTPException(status_code=400, detail="Имя должно содержать минимум 2 символа")
+            raise HTTPException(status_code=400, detail="Name need to have minimum 2 characters")
 
-        if not user_form.password or len(user_form.password) < 6:
-            raise HTTPException(status_code=400, detail="Пароль должен содержать минимум 6 символов")
-
-        if not user_form.city or len(user_form.city.strip()) < 2:
-            raise HTTPException(status_code=400, detail="Город обязателен")
+        if not user_form.password or len(user_form.password) < 8:
+            raise HTTPException(status_code=400, detail="Password need to have minimum 8 characters")
 
         hashed_password = hash_password(user_form.password)
-        country = await Country.filter(id=user_form.country).first()
 
         try:
             verification_code = ''.join([str(random.randint(0, 9)) for _ in range(6)])
@@ -78,8 +69,6 @@ class UserCreateMixin:
                 'name': user_form.name.strip(),
                 'email': email,
                 'password': hashed_password,
-                'country': country,
-                'city': user_form.city.strip(),
                 'role': 0,
                 'user_role': 'user',
                 'language': user_form.language or 'en'
@@ -97,6 +86,7 @@ class UserCreateMixin:
                 },
                 status_code=201
             )
+            print(verification_code)
 
             return response
 
@@ -105,44 +95,41 @@ class UserCreateMixin:
 
     @staticmethod
     async def verify_email_code(request: Request):
-        try:
-            data = await request.json()
-            email = data.get('email', '').strip().lower()
-            submitted_code = data.get('code', '').strip()
+        data = await request.json()
+        email = data.get('email', '').strip().lower()
+        submitted_code = data.get('code', '').strip()
 
-            if not email or not submitted_code:
-                raise HTTPException(status_code=400, detail="Email и код обязательны")
+        if not email or not submitted_code:
+            raise HTTPException(status_code=400, detail="Email и код обязательны")
 
-            expected_code = EMAIL_VERIFICATION_CODES.get(email)
+        expected_code = EMAIL_VERIFICATION_CODES.get(email)
 
-            if not expected_code:
-                raise HTTPException(status_code=400, detail="Код верификации не найден или истек")
+        if not expected_code:
+            raise HTTPException(status_code=400, detail="Код верификации не найден или истек")
 
-            if submitted_code != expected_code:
-                raise HTTPException(status_code=400, detail="Неверный код верификации")
+        if submitted_code != expected_code:
+            raise HTTPException(status_code=400, detail="Неверный код верификации")
 
-            if email not in PENDING_REGISTRATIONS:
-                raise HTTPException(status_code=400, detail="Данные регистрации не найдены")
+        if email not in PENDING_REGISTRATIONS:
+            raise HTTPException(status_code=400, detail="Данные регистрации не найдены")
 
-            registration_data = PENDING_REGISTRATIONS.pop(email)
+        registration_data = PENDING_REGISTRATIONS.pop(email)
 
-            user = await User.create(
+        user = await User.create(
                 name=registration_data['name'],
                 email=registration_data['email'],
                 password=registration_data['password'],
-                country=registration_data['country'],
-                city=registration_data['city'],
                 role=registration_data['role'],
                 user_role='executor',
                 language=registration_data['language']
             )
 
-            EMAIL_VERIFICATION_CODES.pop(email, None)
+        EMAIL_VERIFICATION_CODES.pop(email, None)
 
-            jwt_token = await create_jwt_token(user.id, user.email, user.language, user.role)
+        jwt_token = await create_jwt_token(user.id, user.email, user.language, user.role)
 
-            response = JSONResponse(
-                content={
+        response = JSONResponse(
+            content={
                     "message": "Email успешно верифицирован",
                     "user": {
                         "id": user.id,
@@ -157,23 +144,23 @@ class UserCreateMixin:
                 status_code=200
             )
 
-            from services.user.email.smtp_client import SMTPClient
-            from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
-            smtp_client = SMTPClient(
+        from services.user.email.smtp_client import SMTPClient
+        from config import SMTP_HOST, SMTP_PORT, SENDER_EMAIL, SENDER_PASSWORD
+        smtp_client = SMTPClient(
                 host=SMTP_HOST,
                 port=SMTP_PORT,
                 username=SENDER_EMAIL,
                 password=SENDER_PASSWORD
             )
-            subject = "Зареєстровані успішно / Registered Successfully"
-            body = f"""
+        subject = "Зареєстровані успішно / Registered Successfully"
+        body = f"""
 Вітаємо! Ваш акаунт на MakeASAP був успішно створений.
 
 Congratulations! Your MakeASAP account has been successfully registered.
 """
-            await smtp_client.send_email(user.email, subject, body)
+        await smtp_client.send_email(user.email, subject, body)
 
-            response.set_cookie(
+        response.set_cookie(
                 key=JWT_COOKIE_NAME,
                 value=jwt_token,
                 max_age=60 * 60 * 24 * 7,
@@ -183,9 +170,5 @@ Congratulations! Your MakeASAP account has been successfully registered.
                 path="/",
             )
 
-            return response
+        return response
 
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Ошибка при верификации: {str(e)}")

@@ -70,7 +70,6 @@ CREATE TABLE IF NOT EXISTS "users" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(64) NOT NULL,
     "email" VARCHAR(64) NOT NULL UNIQUE,
-    "city" VARCHAR(64) NOT NULL,
     "password" VARCHAR(128) NOT NULL,
     "role" INT NOT NULL DEFAULT 0,
     "language" VARCHAR(2) NOT NULL DEFAULT 'en',
@@ -95,8 +94,7 @@ CREATE TABLE IF NOT EXISTS "users" (
     "company_description_de" TEXT,
     "auto_translated_fields" JSONB,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "country_id" INT REFERENCES "countries" ("id") ON DELETE CASCADE
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS "banned_ips" (
     "id" SERIAL NOT NULL PRIMARY KEY,
@@ -117,6 +115,7 @@ CREATE TABLE IF NOT EXISTS "bids" (
     "slug_pl" VARCHAR(256),
     "slug_fr" VARCHAR(256),
     "slug_de" VARCHAR(256),
+    "main_language" VARCHAR(2) DEFAULT 'en',
     "categories" JSONB,
     "under_categories" JSONB,
     "description_uk" TEXT,
@@ -167,7 +166,7 @@ CREATE TABLE IF NOT EXISTS "blog_articles" (
     "featured_image" VARCHAR(500),
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "author_id" INT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE
+    "author_id" INT REFERENCES "users" ("id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "chats" (
     "id" SERIAL NOT NULL PRIMARY KEY,
@@ -227,26 +226,26 @@ CREATE TABLE IF NOT EXISTS "aerich" (
     "app" VARCHAR(100) NOT NULL,
     "content" JSONB NOT NULL
 );
-CREATE TABLE IF NOT EXISTS "users_category" (
-    "users_id" INT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
-    "category_id" INT NOT NULL REFERENCES "category" ("id") ON DELETE CASCADE
-);
-CREATE UNIQUE INDEX IF NOT EXISTS "uidx_users_categ_users_i_ebdfd7" ON "users_category" ("users_id", "category_id");
 CREATE TABLE IF NOT EXISTS "users_undercategory" (
     "users_id" INT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
     "undercategory_id" INT NOT NULL REFERENCES "undercategory" ("id") ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX IF NOT EXISTS "uidx_users_under_users_i_919e37" ON "users_undercategory" ("users_id", "undercategory_id");
-CREATE TABLE IF NOT EXISTS "company_category" (
-    "company_id" INT NOT NULL REFERENCES "company" ("id") ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS "users_category" (
+    "users_id" INT NOT NULL REFERENCES "users" ("id") ON DELETE CASCADE,
     "category_id" INT NOT NULL REFERENCES "category" ("id") ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "uidx_company_cat_company_e47703" ON "company_category" ("company_id", "category_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_users_categ_users_i_ebdfd7" ON "users_category" ("users_id", "category_id");
 CREATE TABLE IF NOT EXISTS "company_undercategory" (
     "company_id" INT NOT NULL REFERENCES "company" ("id") ON DELETE CASCADE,
     "undercategory_id" INT NOT NULL REFERENCES "undercategory" ("id") ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX IF NOT EXISTS "uidx_company_und_company_b5d708" ON "company_undercategory" ("company_id", "undercategory_id");"""
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_company_und_company_b5d708" ON "company_undercategory" ("company_id", "undercategory_id");
+CREATE TABLE IF NOT EXISTS "company_category" (
+    "company_id" INT NOT NULL REFERENCES "company" ("id") ON DELETE CASCADE,
+    "category_id" INT NOT NULL REFERENCES "category" ("id") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_company_cat_company_e47703" ON "company_category" ("company_id", "category_id");"""
 
 
 async def downgrade(db: BaseDBAsyncClient) -> str:
