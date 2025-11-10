@@ -88,7 +88,7 @@ async def read_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     try:
-        await current_user.fetch_related("categories", "subcategories", "country")
+        await current_user.fetch_related("categories", "subcategories")
     except Exception as e:
         pass
     
@@ -100,8 +100,6 @@ async def read_current_user(request: Request):
         "avatar": current_user.avatar,
         "user_role": current_user.user_role,
         "profile_description": current_user.profile_description,
-        "city": current_user.city,
-        "country": current_user.country,
         "categories": current_user.categories,
         "subcategories": current_user.subcategories,
     }

@@ -7,6 +7,7 @@ from schemas.user import UserRegisterForm, UserLoginForm
 from routers.secur import get_current_user
 from models.user import User
 
+
 async def get_current_user_dependency(request: Request):
     return await get_current_user(request)
 
@@ -26,7 +27,7 @@ async def get_user(id: int):
     return user
 
 
-@router.post('/register')
+@router.post("/register")
 async def register_post(data: UserRegisterForm):
     return await UserServices.register_user(data)
 
@@ -38,11 +39,13 @@ async def login_post(login_data: UserLoginForm):
 
 @router.post("/logout")
 async def logout_user(response: Response):
-    response.delete_cookie(key= JWT_COOKIE_NAME, httponly=True, samesite="lax", secure=False, path="/")
+    response.delete_cookie(
+        key=JWT_COOKIE_NAME, httponly=True, samesite="lax", secure=False, path="/"
+    )
     return {"detail": "Logged out"}
 
 
-@router.post('/verify-code')
+@router.post("/verify-code")
 async def verify_code_post(request: Request):
     return await UserServices.verify_email_code(request)
 
@@ -52,12 +55,11 @@ async def get_current_user_info(user: User = Depends(get_current_user_dependency
     """Get current user information"""
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+
     return {
         "id": user.id,
         "email": user.email,
         "name": user.name,
         "role": user.role,
         "language": user.language,
-        "city": user.city
     }
