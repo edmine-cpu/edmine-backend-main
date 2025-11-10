@@ -322,3 +322,122 @@ class BidService:
         """
         return await Bid.get_or_none(id=bid_id).select_related('author')
 
+    @staticmethod
+    async def update_user_bid(bid_id: int, user_id: int, update_data: dict):
+        """
+        Обновить заявку пользователя (только свою)
+        """
+        bid = await Bid.get_or_none(id=bid_id).select_related('author')
+        if not bid:
+            raise HTTPException(status_code=404, detail="Заявка не найдена")
+
+        # Проверяем, что пользователь является автором заявки
+        if not bid.author or bid.author.id != user_id:
+            raise HTTPException(status_code=403, detail="Нет прав для редактирования этой заявки")
+
+        # Определяем основной язык бида
+        from services.translation.utils import detect_primary_language
+        main_language = detect_primary_language(
+            title_uk=update_data.get('title_uk'),
+            title_en=update_data.get('title_en'),
+            title_pl=update_data.get('title_pl'),
+            title_fr=update_data.get('title_fr'),
+            title_de=update_data.get('title_de'),
+            description_uk=update_data.get('description_uk'),
+            description_en=update_data.get('description_en'),
+            description_pl=update_data.get('description_pl'),
+            description_fr=update_data.get('description_fr'),
+            description_de=update_data.get('description_de')
+        )
+        update_data['main_language'] = main_language
+
+        # Автоматический перевод полей
+        translation_result = await auto_translate_bid_fields(
+            title_uk=update_data.get('title_uk'),
+            title_en=update_data.get('title_en'),
+            title_pl=update_data.get('title_pl'),
+            title_fr=update_data.get('title_fr'),
+            title_de=update_data.get('title_de'),
+            description_uk=update_data.get('description_uk'),
+            description_en=update_data.get('description_en'),
+            description_pl=update_data.get('description_pl'),
+            description_fr=update_data.get('description_fr'),
+            description_de=update_data.get('description_de')
+        )
+
+        update_data.update({
+            'title_uk': translation_result['title_uk'],
+            'title_en': translation_result['title_en'],
+            'title_pl': translation_result['title_pl'],
+            'title_fr': translation_result['title_fr'],
+            'title_de': translation_result['title_de'],
+            'description_uk': translation_result['description_uk'],
+            'description_en': translation_result['description_en'],
+            'description_pl': translation_result['description_pl'],
+            'description_fr': translation_result['description_fr'],
+            'description_de': translation_result['description_de'],
+            'auto_translated_fields': translation_result['auto_translated_fields']
+        })
+
+        # Обновляем slug'и
+        slugs = await generate_bid_slugs(
+            title_uk=update_data['title_uk'],
+            title_en=update_data['title_en'],
+            title_pl=update_data['title_pl'],
+            title_fr=update_data['title_fr'],
+            title_de=update_data['title_de'],
+            bid_id=bid.id
+        )
+        update_data.update(slugs)
+
+        # Обновляем заявку
+        await BidCRUD.update_bid(bid, update_data)
+
+        return JSONResponse({
+            "success": True,
+            "message": "Заявка успешно обновлена"
+        })
+
+    @staticmethod
+    async def delete_user_bid(bid_id: int, user_id: int):
+        """
+        Удалить заявку пользователя (только свою)
+        """
+        bid = await Bid.get_or_none(id=bid_id).select_related('author')
+        if not bid:
+            raise HTTPException(status_code=404, detail="Заявка не найдена")
+
+        # Проверяем, что пользователь является автором заявки
+        if not bid.author or bid.author.id != user_id:
+            raise HTTPException(status_code=403, detail="Нет прав для удаления этой заявки")
+
+        # Удаляем файлы, если они есть
+        if bid.files:
+            for file_path in bid.files:
+                full_path = os.path.join(os.getcwd(), file_path.lstrip('/'))
+                if os.path.exists(full_path):
+                    try:
+                        os.remove(full_path)
+                    except Exception:
+                        pass
+
+        await BidCRUD.delete_bid(bid)
+        return JSONResponse({
+            "success": True,
+            "message": "Заявка успешно удалена"
+        })
+
+    @staticmethod
+    async def get_user_bids(user_id: int, limit: Optional[int] = 20):
+        """
+        Получить все заявки пользователя
+        """
+        qs = Bid.filter(author_id=user_id).order_by("-created_at")
+
+        if limit:
+            qs = qs.limit(min(limit, 100))
+        else:
+            qs = qs.limit(20)
+
+        return await qs
+

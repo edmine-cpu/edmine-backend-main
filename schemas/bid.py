@@ -61,3 +61,45 @@ class BidResponse(BaseModel):
 class BidVerifyRequest(BaseModel):
     email: str
     code: str
+
+
+class BidUpdateRequest(BaseModel):
+    title_uk: Optional[str] = None
+    title_en: Optional[str] = None
+    title_pl: Optional[str] = None
+    title_fr: Optional[str] = None
+    title_de: Optional[str] = None
+    description_uk: Optional[str] = None
+    description_en: Optional[str] = None
+    description_pl: Optional[str] = None
+    description_fr: Optional[str] = None
+    description_de: Optional[str] = None
+
+    country: Optional[int] = None
+    city: Optional[int] = None
+
+    budget: Optional[int] = None
+    budget_type: Optional[str] = None
+
+    category: Optional[List[int]] = None
+    under_category: Optional[List[int]] = None
+
+    @field_validator("category", "under_category", mode="before")
+    def convert_to_int_list(cls, v):
+        if v == "" or v is None:
+            return None
+        if isinstance(v, str):
+            return [int(x) for x in v.split(",") if x.strip().isdigit()]
+        return v
+
+    @field_validator("country", "city", mode="before")
+    def convert_to_int(cls, v):
+        if v == "" or v is None:
+            return None
+        return int(v)
+
+    @field_validator("budget", mode="before")
+    def convert_budget(cls, v):
+        if v == "" or v is None:
+            return None
+        return int(v)

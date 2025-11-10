@@ -5,7 +5,6 @@ import uuid
 import shutil
 from models.user import User
 from models.categories import Category, UnderCategory
-from models.places import Country, City
 from routers.secur import get_current_user
 
 async def get_current_user_dependency(request: Request):
@@ -20,17 +19,12 @@ async def get_profile(user: User = Depends(get_current_user_dependency)):
     """Get current user profile with all details"""
     if not user:
         raise HTTPException(status_code=401, detail="User not authenticated")
-    
+
     try:
-        await user.fetch_related("categories", "subcategories", "country")
+        await user.fetch_related("categories", "subcategories")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
-    
-    # Get cities for user's country
-    cities = []
-    if user.country:
-        cities = await City.filter(country=user.country).all()
-    
+
     return {
         "id": user.id,
         "name": user.name,
@@ -39,15 +33,6 @@ async def get_profile(user: User = Depends(get_current_user_dependency)):
         "avatar": user.avatar,
         "user_role": user.user_role,
         "profile_description": user.profile_description,
-        "city": user.city,
-        "country": {
-            "id": user.country.id,
-            "name_uk": user.country.name_uk,
-            "name_en": user.country.name_en,
-            "name_pl": user.country.name_pl,
-            "name_fr": user.country.name_fr,
-            "name_de": user.country.name_de,
-        } if user.country else None,
         "language": user.language,
         "categories": [
             {
@@ -68,16 +53,6 @@ async def get_profile(user: User = Depends(get_current_user_dependency)):
                 "name_fr": subcat.name_fr,
                 "name_de": subcat.name_de,
             } for subcat in user.subcategories
-        ],
-        "cities": [
-            {
-                "id": city.id,
-                "name_uk": city.name_uk,
-                "name_en": city.name_en,
-                "name_pl": city.name_pl,
-                "name_fr": city.name_fr,
-                "name_de": city.name_de,
-            } for city in cities
         ]
     }
 
@@ -209,29 +184,6 @@ async def update_categories(
         await user.subcategories.add(subcategory)
     
     return {"message": "Categories updated successfully"}
-
-@router.put("/profile/location")
-async def update_location(
-    country_id: int = Form(...),
-    city: int = Form(...),
-    user: User = Depends(get_current_user_dependency)
-):
-
-    country = await Country.get_or_none(id=country_id)
-    if not country:
-        raise HTTPException(status_code=400, detail="Invalid country")
-    
-    city_obj = await City.filter(country=country, id=city).first()
-
-
-    if not city_obj:
-        raise HTTPException(status_code=400, detail="City not found in selected country")
-
-    user.country = country
-    user.city = city_obj.name_en
-    await user.save()
-    
-    return {"message": "Location updated successfully"}
 
 @router.delete("/profile/avatar")
 async def delete_avatar(user: User = Depends(get_current_user_dependency)):

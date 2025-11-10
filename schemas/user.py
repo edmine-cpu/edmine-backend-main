@@ -5,7 +5,6 @@ from typing import List, Optional, Dict, Annotated, Any
 class UserBase(BaseModel):
     name: str
     email: EmailStr
-    city: str
     password: str
 
 
@@ -31,8 +30,6 @@ class UserRegisterForm(BaseModel):
 class UserUpdateSchema(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
-    city: Optional[int] = None
-    country_id: Optional[int] = None
     language: Optional[str] = None
 
     company_name_uk: Optional[str] = None

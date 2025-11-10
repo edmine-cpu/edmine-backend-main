@@ -245,7 +245,7 @@ async def send_message(
         if current_user.id not in [chat.user1_id, chat.user2_id]:
             raise HTTPException(status_code=403, detail="Нет доступа к этому чату")
 
-        ация
+        # Валидация контента
         if not content and not file:
             raise HTTPException(status_code=400, detail="Сообщение или файл обязательны")
 
@@ -253,25 +253,45 @@ async def send_message(
             raise HTTPException(status_code=400, detail="Сообщение не может быть пустым")
 
         file_path = None
-        file_name = None
         file_size = None
 
         if file:
-            if file.size and file.size > 10 * 1024 * 1024:
-                raise HTTPException(status_code=400, detail="Файл слишком большой (максимум 10MB)")
+            # Разрешаем все типы файлов
+            # Список опасных расширений, которые не разрешаем
+            dangerous_extensions = ['.exe', '.bat', '.cmd', '.sh', '.ps1', '.msi', '.scr', '.com', '.pif']
 
-            allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
-            if file.content_type not in allowed_types:
-                raise HTTPException(status_code=400, detail="Неподдерживаемый тип файла")
+            file_extension = os.path.splitext(file.filename)[1].lower() if file.filename else '.txt'
 
-            file_extension = os.path.splitext(file.filename)[1] if file.filename else '.txt'
-            file_name = f"{uuid.uuid4()}{file_extension}"
-            file_path = f"static/chat_files/{file_name}"
-            
-            with open(file_path, "wb") as buffer:
-                content_data = await file.read()
-                buffer.write(content_data)
-                file_size = len(content_data)
+            if file_extension in dangerous_extensions:
+                raise HTTPException(status_code=400, detail="Исполняемые файлы запрещены из соображений безопасности")
+
+            # Генерируем уникальное имя файла
+            unique_file_name = f"{uuid.uuid4()}{file_extension}"
+            # Путь для сохранения на диске (физический путь)
+            disk_path = f"static/chat_files/{unique_file_name}"
+            # Путь для URL (относительно /static)
+            file_path = f"/chat_files/{unique_file_name}"
+
+            # Читаем и сохраняем файл chunk by chunk для больших файлов
+            chunk_size = 1024 * 1024  # 1MB chunks
+            total_size = 0
+            max_size = 50 * 1024 * 1024  # 50MB max
+
+            with open(disk_path, "wb") as buffer:
+                while True:
+                    chunk = await file.read(chunk_size)
+                    if not chunk:
+                        break
+                    total_size += len(chunk)
+                    if total_size > max_size:
+                        # Удаляем частично загруженный файл
+                        buffer.close()
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                        raise HTTPException(status_code=400, detail="Файл слишком большой (максимум 50MB)")
+                    buffer.write(chunk)
+
+            file_size = total_size
 
         message = await Message.create(
             chat_id=chat_id,
@@ -289,7 +309,7 @@ async def send_message(
             "file_path": message.file_path,
             "file_name": message.file_name,
             "file_size": message.file_size,
-            "sender_id": message.sender.id,
+            "sender_id": current_user.id,  # Используем current_user.id напрямую
             "is_read": message.is_read,
             "created_at": message.created_at.isoformat() if message.created_at else None
         }
