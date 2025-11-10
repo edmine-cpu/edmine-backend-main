@@ -2,8 +2,6 @@ from contextlib import asynccontextmanager
 from tortoise import Tortoise
 from settings import settings
 
-DATABASE_URL = settings.database_url
-
 DATABASE_MODULES = ["models"]
 
 JWT_SECRET_KEY = settings.JWT_SECRET
@@ -52,7 +50,7 @@ DEFAULT_SORT_ORDER = 'newest'
 @asynccontextmanager
 async def lifespan(app):
     await Tortoise.init(
-        db_url=DATABASE_URL,
+        db_url=await settings.database_url,
         modules={'models': DATABASE_MODULES}
     )
     await Tortoise.generate_schemas()

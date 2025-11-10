@@ -266,7 +266,7 @@ CITIES_DATA = {
 async def init_db():
     """Инициализация подключения к БД"""
     await Tortoise.init(
-        db_url=settings.database_url,
+        db_url=await settings.database_url,
         modules={
             "models": [
                 "models.user",

@@ -6,10 +6,7 @@ class Settings(BaseSettings):
     """Application settings loaded from .env file"""
 
     model_config = SettingsConfigDict(
-        env_file='.env',
-        env_file_encoding='utf-8',
-        case_sensitive=False,
-        extra='ignore'
+        env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
     DB_HOST: str = Field(default="localhost")
@@ -34,14 +31,18 @@ class Settings(BaseSettings):
     APP_PORT: int = Field(default=8000)
     DEBUG: bool = Field(default=False)
 
+    PRODUCTION: bool = Field(default=False)
+
     @property
-    def database_url(self) -> str:
-        """Generate Tortoise ORM database URL"""
+    def is_production(self) -> bool:
+        return self.PRODUCTION
+
+    @property
+    async def database_url(self) -> str:
         return f"postgres://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
-    def database_url_asyncpg(self) -> str:
-        """Generate asyncpg database URL"""
+    async def database_url_asyncpg(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 

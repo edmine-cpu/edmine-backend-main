@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
-from tortoise.contrib.fastapi import register_tortoise
 from settings import settings
 from api.admin import router as admin_router
 from api.bids import router as bids_router
@@ -19,8 +18,9 @@ from api.v2.request import router as request_v2_router
 from api.v2.company import router as company_v2_router
 from routers.secur import router as jwt_router
 from admin_panel import setup_admin
+from config import lifespan
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     SessionMiddleware,
@@ -108,21 +108,4 @@ class OptimizedStaticFiles(StaticFiles):
         return await super().__call__(scope, receive, send)
 
 app.mount("/static", OptimizedStaticFiles(directory="static"), name="static")
-
-register_tortoise(
-    app,
-    db_url=settings.database_url,
-    modules={
-        "models": [
-            "models.user",
-            "models.actions",
-            "models.categories",
-            "models.places",
-            "models.chat",
-            "models.password_reset",
-        ]
-    },
-    generate_schemas=False,
-    add_exception_handlers=True,
-)
 
